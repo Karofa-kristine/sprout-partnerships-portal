@@ -1,0 +1,42 @@
+# Render Blueprint for the Peoplebox Client Portal.
+# Non-secret settings live here; secrets are set in the Render dashboard
+# (marked sync:false below) or uploaded as a Secret File.
+services:
+  - type: web
+    name: peoplebox-client-portal
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /login.html
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Behind Render's HTTPS proxy — required so secure session cookies work.
+      - key: SECURE_COOKIES
+        value: "true"
+      - key: SPREADSHEET_ID
+        value: 15hU9z9N8xjyUCsUFRpD5ybEs3VYNbiU-LTRqYocxdYE
+      - key: PEOPLEBOX_TAB
+        value: Peoplebox
+      - key: CACHE_TTL_SECONDS
+        value: "60"
+      - key: ALLOWED_EMAIL_DOMAINS
+        value: sprout.ph
+      # Service-account key uploaded as a Render "Secret File" named
+      # service-account.json (mounted at /etc/secrets/).
+      - key: GOOGLE_SERVICE_ACCOUNT_KEY_FILE
+        value: /etc/secrets/service-account.json
+      # Render generates a strong random value on first deploy.
+      - key: SESSION_SECRET
+        generateValue: true
+      # --- Set these three in the dashboard (kept out of the repo) ---
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      # Set to https://<your-service>.onrender.com/auth/google/callback
+      # once the service URL is known.
+      - key: OAUTH_REDIRECT_URI
+        sync: false

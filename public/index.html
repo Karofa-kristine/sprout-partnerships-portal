@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Peoplebox Client Portal — Sprout</title>
+  <link rel="icon" href="/sprout-leaf.png"/>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="leaf"><img src="/sprout-leaf.png" alt="Sprout"/></div>
+      <div>
+        <h1>Peoplebox Client Portal</h1>
+        <div class="sub">Partner Products · Sprout Operations</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="refresh-meta">
+      <div class="lbl eyebrow">Last refreshed</div>
+      <div class="ts num" id="refreshTs">—</div>
+    </div>
+    <button class="btn" id="refreshBtn" title="Re-read the source sheet">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      Refresh
+    </button>
+    <div class="user" id="userBox"></div>
+  </div>
+
+  <div id="loading" class="statebox"><div class="sp"></div>Loading client data from the source sheet…</div>
+  <div id="error" class="statebox err" style="display:none"></div>
+
+  <div class="wrap" id="app" style="display:none">
+    <div class="banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+      <div><b>Data fidelity:</b> Portfolio KPIs, charts, and the client roster are all built from the per-client records in the Peoplebox tab. The status donut tallies each client's <b>Client Status</b>; the integration breakdown tallies each client's <b>Data Sync &amp; SSO Activation Status</b>. Monthly headcount columns are shown when populated in the sheet.</div>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="charts">
+      <div class="card">
+        <div class="section-head"><h2>Client status</h2><span class="note" id="statusTotal"></span></div>
+        <div class="donut-wrap">
+          <div class="donut" id="donut"><div class="center"><span class="big num" id="donutTotal">—</span><span class="cap">clients</span></div></div>
+          <div class="legend" id="statusLegend"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Integration status</h2><span class="note">across all Peoplebox clients</span></div>
+        <div class="bars" id="intBars"></div>
+      </div>
+    </div>
+
+    <div class="section-head"><h2>Billing &amp; payments</h2><span class="note" id="billingNote"></span></div>
+    <div class="kpis" id="billing"></div>
+
+    <div class="section-head"><h2>Client roster</h2><span class="note" id="rosterNote"></span></div>
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="search" type="text" placeholder="Search company name…" autocomplete="off"/>
+      </div>
+      <select class="flt" id="fStatus"><option value="">All account status</option></select>
+      <select class="flt" id="fSwitch"><option value="">All switch status</option></select>
+      <select class="flt" id="fPaid"><option value="">All payment status</option></select>
+      <select class="flt" id="fCsm"><option value="">All CSMs</option></select>
+      <button class="btn" id="clearBtn">Clear</button>
+      <button class="btn primary" id="exportBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Export CSV
+      </button>
+    </div>
+    <div class="chips" id="chips"></div>
+
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr id="headRow">
+              <th class="sortable" data-sort="co">Company<span class="arrow"></span></th>
+              <th>Account</th>
+              <th>Peoplebox switch</th>
+              <th>Paid to Sprout</th>
+              <th>Pbox invoice</th>
+              <th>Pbox inv. status</th>
+              <th>CSM</th>
+              <th class="sortable" data-sort="end">Sub. end<span class="arrow"></span></th>
+              <th>HC trend (12 mo)</th>
+              <th class="r sortable" data-sort="hc">Current HC<span class="arrow"></span></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="tablefoot" id="tablefoot"></div>
+    </div>
+  </div>
+
+  <footer id="footer"></footer>
+
+  <div class="overlay" id="overlay"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true"></aside>
+
+  <script src="/app.js"></script>
+</body>
+</html>
