@@ -28,6 +28,18 @@ function allowedDomains() {
     .filter(Boolean);
 }
 
+// Specific individual emails allowed in addition to the domains above.
+function allowedEmails() {
+  return (process.env.ALLOWED_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function isAllowed(email, domain) {
+  return allowedDomains().includes(domain) || allowedEmails().includes(email);
+}
+
 /** Express middleware: block API access unless signed in. */
 function requireAuth(req, res, next) {
   if (req.session && req.session.user) return next();
@@ -40,8 +52,8 @@ function mount(app) {
       access_type: 'online',
       prompt: 'select_account',
       scope: ['openid', 'email', 'profile'],
-      // Hint Google to the org domain (UX only — we still verify below).
-      hd: allowedDomains()[0],
+      // No `hd` hint: it restricts the picker to a single hosted domain, which
+      // would block the other allowed domains/emails. We verify below instead.
     });
     res.redirect(url);
   });
@@ -61,7 +73,7 @@ function mount(app) {
       const email = (payload.email || '').toLowerCase();
       const domain = email.split('@')[1];
 
-      if (!payload.email_verified || !allowedDomains().includes(domain)) {
+      if (!payload.email_verified || !isAllowed(email, domain)) {
         return res.redirect('/login.html?error=domain');
       }
 

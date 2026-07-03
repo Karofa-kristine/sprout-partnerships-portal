@@ -23,7 +23,10 @@ services:
       - key: CACHE_TTL_SECONDS
         value: "60"
       - key: ALLOWED_EMAIL_DOMAINS
-        value: sprout.ph
+        value: sprout.ph,peoplebox.ai
+      # Optional individual emails (comma-separated); managed in the dashboard.
+      - key: ALLOWED_EMAILS
+        sync: false
       # Service-account key uploaded as a Render "Secret File" named
       # service-account.json (mounted at /etc/secrets/).
       - key: GOOGLE_SERVICE_ACCOUNT_KEY_FILE
