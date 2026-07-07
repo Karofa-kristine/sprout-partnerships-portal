@@ -1,7 +1,7 @@
 {
   "name": "peoplebox-client-portal",
   "version": "1.0.0",
-  "description": "Peoplebox Client Portal — live read-only view of the Peoplebox tab of the Partner Products tracker, with Google SSO.",
+  "description": "Sprout Partnerships Portal — live read-only view of the Peoplebox tab of the Partner Products tracker, with Google SSO.",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {

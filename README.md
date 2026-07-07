@@ -1,4 +1,4 @@
-# Peoplebox Client Portal
+# Sprout Partnerships Portal
 
 A live, read-only web portal that surfaces Peoplebox client monitoring data from
 the **Peoplebox** tab of the *Partner Products Active Clients* tracker. Internal

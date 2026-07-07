@@ -75,6 +75,6 @@ app.get('/api/data', auth.requireAuth, async (req, res) => {
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 app.listen(PORT, () => {
-  console.log(`Peoplebox Client Portal listening on http://localhost:${PORT}`);
+  console.log(`Sprout Partnerships Portal listening on http://localhost:${PORT}`);
   if (!SPREADSHEET_ID) console.warn('⚠  SPREADSHEET_ID is not set — see .env.example');
 });

@@ -1,4 +1,4 @@
-# Render Blueprint for the Peoplebox Client Portal.
+# Render Blueprint for the Sprout Partnerships Portal.
 # Non-secret settings live here; secrets are set in the Render dashboard
 # (marked sync:false below) or uploaded as a Secret File.
 services:
