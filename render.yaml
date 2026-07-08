@@ -3,7 +3,7 @@
 # (marked sync:false below) or uploaded as a Secret File.
 services:
   - type: web
-    name: peoplebox-client-portal
+    name: sprout-partnerships-portal
     runtime: node
     plan: free
     buildCommand: npm install
