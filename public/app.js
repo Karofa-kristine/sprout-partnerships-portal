@@ -164,6 +164,7 @@ function filtered() {
   rows.sort(function (a, b) {
     var x, y;
     if (sort.key === 'hc') { x = lastHC(a.hc) || -1; y = lastHC(b.hc) || -1; }
+    else if (sort.key === 'start') { x = parseDate(a.start); y = parseDate(b.start); }
     else if (sort.key === 'end') { x = parseDate(a.end); y = parseDate(b.end); }
     else { x = a.co.toLowerCase(); y = b.co.toLowerCase(); }
     return x < y ? -sort.dir : x > y ? sort.dir : 0;
@@ -194,7 +195,7 @@ function render() {
   renderChips(); renderSortIndicators();
   var rows = filtered(), tb = $('#tbody'); tb.innerHTML = '';
   if (!rows.length) {
-    tb.appendChild(el('tr', null, "<td colspan='9'><div class='empty'><strong>No clients match these filters.</strong>Try clearing a filter or searching a different name.</div></td>"));
+    tb.appendChild(el('tr', null, "<td colspan='10'><div class='empty'><strong>No clients match these filters.</strong>Try clearing a filter or searching a different name.</div></td>"));
   } else {
     rows.forEach(function (c) {
       var tr = el('tr'); tr.tabIndex = 0;
@@ -207,6 +208,7 @@ function render() {
         '<td>' + billPill(c.pboxInvoiced, /^yes$/i) + '</td>' +
         '<td>' + billPill(c.pboxInvoice, /^paid$/i) + '</td>' +
         "<td class='csm'>" + (c.csm === 'Unassigned' ? "<span style='color:var(--faint)'>Unassigned</span>" : esc(c.csm)) + '</td>' +
+        "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.start || '—') + '</td>' +
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.end || '—') + '</td>' +
         "<td class='r hc num'>" + (hc == null ? '—' : hc) + '</td>';
       tr.onclick = function () { openDrawer(c); };
