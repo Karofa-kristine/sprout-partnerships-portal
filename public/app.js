@@ -133,16 +133,6 @@ function renderDonut() {
     lg.appendChild(el('div', 'row', "<span class='dot' style='background:" + statusColor(s.name) + "'></span><span class='nm'>" + esc(s.name) + "</span><span class='ct num'>" + s.count + '</span>'));
   });
 }
-function renderBars() {
-  var b = DATA.integrationBreakdown, mx = Math.max.apply(null, b.map(function (x) { return x.count; })), c = $('#intBars'); c.innerHTML = '';
-  b.forEach(function (x, i) {
-    var color = INT_PALETTE[i % INT_PALETTE.length];
-    var row = el('div', 'b', "<span class='lab' title='" + esc(x.name) + "'>" + esc(x.name) + "</span><span class='track'><span class='fill' style='width:0;background:" + color + "'></span></span><span class='ct num'>" + x.count + '</span>');
-    c.appendChild(row);
-    requestAnimationFrame(function () { row.querySelector('.fill').style.width = (x.count / mx * 100) + '%'; });
-  });
-}
-
 /* ---------- filters + table ---------- */
 function uniq(a) { var o = {}, r = []; a.forEach(function (v) { if (v && !o[v]) { o[v] = 1; r.push(v); } }); return r; }
 function populateFilters() {
@@ -307,7 +297,7 @@ function applyData(payload) {
   $('#loading').style.display = 'none';
   $('#app').style.display = '';
   if (!$('#fStatus').dataset.filled) { populateFilters(); $('#fStatus').dataset.filled = '1'; }
-  renderKPIs(); renderBilling(); renderDonut(); renderBars(); render(); stamp(DATA.generatedAt);
+  renderKPIs(); renderBilling(); renderDonut(); render(); stamp(DATA.generatedAt);
   $('#footer').innerHTML = 'Source: Partner Products Active Clients (WIP) · ' + esc(DATA.source.tab) + ' tab · File ID ' + esc(DATA.source.spreadsheetId) + ' · Read-only. Finance-sensitive columns (ARR, PEPM, pricing, AR remarks) are excluded from this view.';
 }
 function load(force, silent) {
