@@ -71,6 +71,7 @@ function mapColumns(headerRow) {
     clientStatus: ['client status'],
     cid: ['cid'],
     company: ['company name'],
+    closedDate: ['closed date'],
     csm: ['csm'],
     goLive: ['go-live date', 'go live date', 'implem project handover date', 'project handover date'],
     years: ['# of years subscribed', '# of  years subscribed', 'number of years subscribed'],
@@ -139,6 +140,7 @@ function parseClientTable(grid) {
     clients.push({
       co: company,
       cid: (row[cols.cid] || '').trim(),
+      closed: (row[cols.closedDate] || '').trim(),
       acct: acctRaw || 'Unknown',
       sw: sw || '—',
       act: (row[cols.activation] || '').trim() || '—',

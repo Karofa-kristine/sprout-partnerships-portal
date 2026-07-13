@@ -162,6 +162,7 @@ function filtered() {
   rows.sort(function (a, b) {
     var x, y;
     if (sort.key === 'hc') { x = lastHC(a.hc) || -1; y = lastHC(b.hc) || -1; }
+    else if (sort.key === 'closed') { x = parseDate(a.closed); y = parseDate(b.closed); }
     else if (sort.key === 'start') { x = parseDate(a.start); y = parseDate(b.start); }
     else if (sort.key === 'end') { x = parseDate(a.end); y = parseDate(b.end); }
     else { x = a.co.toLowerCase(); y = b.co.toLowerCase(); }
@@ -192,12 +193,13 @@ function render() {
   renderChips(); renderSortIndicators();
   var rows = filtered(), tb = $('#tbody'); tb.innerHTML = '';
   if (!rows.length) {
-    tb.appendChild(el('tr', null, "<td colspan='10'><div class='empty'><strong>No clients match these filters.</strong>Try clearing a filter or searching a different name.</div></td>"));
+    tb.appendChild(el('tr', null, "<td colspan='11'><div class='empty'><strong>No clients match these filters.</strong>Try clearing a filter or searching a different name.</div></td>"));
   } else {
     rows.forEach(function (c) {
       var tr = el('tr'); tr.tabIndex = 0;
       var hc = lastHC(c.hc), isA = c.acct === 'Active';
       tr.innerHTML =
+        "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.closed || '—') + '</td>' +
         "<td class='co'><span class='stripe' style='background:" + (isA ? 'var(--s-active)' : 'var(--s-neutral)') + "'></span>" + esc(c.co) + "<span class='cid'>" + esc(c.cid) + '</span></td>' +
         "<td><span class='pill' style='background:" + (isA ? 'var(--accent-soft)' : '#F0EFEF') + ';color:' + (isA ? 'var(--accent)' : 'var(--s-neutral)') + "'><span class='d' style='background:" + (isA ? 'var(--accent)' : 'var(--s-neutral)') + "'></span>" + esc(c.acct) + '</span></td>' +
         '<td>' + billPill(c.act, /activated/i) + '</td>' +
@@ -240,7 +242,7 @@ function openDrawer(c) {
       "<div class='trend'><div class='top'><span class='cur num'>" + (hc == null ? '—' : hc) + "</span><span class='delta " + dcls + "'>" + dtxt + '</span></div>' + trendChart(c.hc) + '</div>' +
       '<h4>Subscription &amp; ownership</h4><div class="fields">' +
         fieldRow('CSM / Owner', c.csm) + fieldRow('Current headcount', hc == null ? '—' : String(hc), true) +
-        fieldRow('Subscription start', c.start, true) + fieldRow('Subscription end', c.end, true) +
+        fieldRow('Closed date', c.closed, true) + fieldRow('Subscription start', c.start, true) + fieldRow('Subscription end', c.end, true) +
         fieldRow('Go-live / Handover', c.go, true) + fieldRow('Years subscribed', c.yrs) +
         fieldRow('Licenses purchased', c.lic == null ? null : String(c.lic), true) + fieldRow('Peoplebox switch', c.sw === '—' ? null : c.sw) +
         fieldRow('Integration / activation status', c.act === '—' ? null : c.act) +
@@ -261,12 +263,12 @@ function closeDrawer() { $('#drawer').classList.remove('on'); $('#drawer').setAt
 /* ---------- CSV ---------- */
 function exportCSV() {
   var rows = filtered();
-  var head = ['Company Name', 'CID', 'Account Status', 'Peoplebox Switch Status', 'Integration / Activation Status', 'CSM', 'Subscription Start', 'Subscription End', 'Go-live / Handover', 'Years Subscribed', 'Licenses', 'Current Headcount', 'Paid to Sprout', 'Invoice from Peoplebox', 'Peoplebox Invoice Status'];
+  var head = ['Closed Date', 'Company Name', 'CID', 'Account Status', 'Peoplebox Switch Status', 'Integration / Activation Status', 'CSM', 'Subscription Start', 'Subscription End', 'Go-live / Handover', 'Years Subscribed', 'Licenses', 'Current Headcount', 'Paid to Sprout', 'Invoice from Peoplebox', 'Peoplebox Invoice Status'];
   var lines = [head.join(',')];
   rows.forEach(function (c) {
     var hc = lastHC(c.hc);
     var clean = function (v) { return v === '—' ? '' : v; };
-    var vals = [c.co, c.cid, c.acct, clean(c.sw), clean(c.act), c.csm === 'Unassigned' ? '' : c.csm, c.start, c.end, c.go, c.yrs === '—' ? '' : c.yrs, c.lic == null ? '' : c.lic, hc == null ? '' : hc, clean(c.paidSprout), clean(c.pboxInvoiced), clean(c.pboxInvoice)];
+    var vals = [c.closed, c.co, c.cid, c.acct, clean(c.sw), clean(c.act), c.csm === 'Unassigned' ? '' : c.csm, c.start, c.end, c.go, c.yrs === '—' ? '' : c.yrs, c.lic == null ? '' : c.lic, hc == null ? '' : hc, clean(c.paidSprout), clean(c.pboxInvoiced), clean(c.pboxInvoice)];
     lines.push(vals.map(function (v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','));
   });
   var blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
