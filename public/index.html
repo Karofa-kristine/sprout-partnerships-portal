@@ -119,9 +119,9 @@
       <div class="table-scroll">
         <table>
           <thead><tr>
-            <th>Client</th><th>Item Display</th><th>Invoice Reference</th><th>Recurring Subscription (Peoplebox remarks)</th>
+            <th>Client</th><th>Item Display</th><th>Invoice Reference</th><th>Invoice Status</th><th>Recurring Subscription (Peoplebox remarks)</th>
           </tr></thead>
-          <tbody id="subsBody"><tr><td colspan="4"><div class="empty">Open this tab to load subscriptions.</div></td></tr></tbody>
+          <tbody id="subsBody"><tr><td colspan="5"><div class="empty">Open this tab to load subscriptions.</div></td></tr></tbody>
         </table>
       </div>
       <div class="tablefoot" id="subsFoot"></div>
@@ -157,21 +157,23 @@
       // ---- Peoplebox Subscriptions (RADAR) ----
       var subsLoaded = false, subsData = [];
       var esc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); };
+      var stColor = function(s){ s=String(s||'').toLowerCase(); return s==='paid'?'#17872F':s==='overdue'?'#c23a3a':s==='open'?'#C2841C':'var(--muted)'; };
 
       function renderSubs(){
         var q = (document.getElementById('subsSearch').value || '').toLowerCase();
         var rows = subsData.filter(function(r){
           if(!q) return true;
-          return [r.client, r.item_display, r.invoice_ref, r.recurring_sub].some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; });
+          return [r.client, r.item_display, r.invoice_ref, r.invoice_status, r.recurring_sub].some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; });
         });
         var tb = document.getElementById('subsBody');
         if(!rows.length){
-          tb.innerHTML = "<tr><td colspan='4'><div class='empty'><strong>No matching subscriptions.</strong></div></td></tr>";
+          tb.innerHTML = "<tr><td colspan='5'><div class='empty'><strong>No matching subscriptions.</strong></div></td></tr>";
         } else {
           tb.innerHTML = rows.map(function(r){
             return "<tr><td style='font-weight:600'>" + esc(r.client||'—') + "</td>" +
               "<td>" + esc(r.item_display||'—') + "</td>" +
               "<td class='num' style='font-size:12.5px'>" + esc(r.invoice_ref||'—') + "</td>" +
+              "<td><span style='font-weight:600;color:" + stColor(r.invoice_status) + "'>" + esc(r.invoice_status||'—') + "</span></td>" +
               "<td>" + esc(r.recurring_sub||'—') + "</td></tr>";
           }).join('');
         }
@@ -181,13 +183,13 @@
       function loadSubs(force){
         if(subsLoaded && !force) return;
         var tb = document.getElementById('subsBody');
-        tb.innerHTML = "<tr><td colspan='4'><div class='empty'>Loading subscriptions from RADAR…</div></td></tr>";
+        tb.innerHTML = "<tr><td colspan='5'><div class='empty'>Loading subscriptions from RADAR…</div></td></tr>";
         fetch('/api/subscriptions' + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
           .then(function(res){ if(!res.ok) return res.json().then(function(j){ throw new Error(j.message || ('HTTP '+res.status)); }); return res.json(); })
           .then(function(data){
             subsLoaded = true;
             if(!data.configured){
-              tb.innerHTML = "<tr><td colspan='4'><div class='empty'><strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server to enable this tab.</div></td></tr>";
+              tb.innerHTML = "<tr><td colspan='5'><div class='empty'><strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server to enable this tab.</div></td></tr>";
               document.getElementById('subsFoot').textContent = '';
               return;
             }
@@ -196,7 +198,7 @@
             renderSubs();
           })
           .catch(function(err){
-            tb.innerHTML = "<tr><td colspan='4'><div class='empty' style='color:#c23a3a'><strong>Could not load subscriptions.</strong>" + esc(err.message) + "</div></td></tr>";
+            tb.innerHTML = "<tr><td colspan='5'><div class='empty' style='color:#c23a3a'><strong>Could not load subscriptions.</strong>" + esc(err.message) + "</div></td></tr>";
           });
       }
 

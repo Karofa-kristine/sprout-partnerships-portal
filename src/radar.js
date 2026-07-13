@@ -86,6 +86,7 @@ async function subscriptions(hubspotIds) {
       s.hubspot_company_id hsid,
       l.item_display_name item_display,
       s.invoice_number invoice_ref,
+      s.invoice_status invoice_status,
       l.line_description recurring_sub
     FROM ${LINES} l
     JOIN ${SUMMARY} s ON l.invoice_id = s.invoice_id
