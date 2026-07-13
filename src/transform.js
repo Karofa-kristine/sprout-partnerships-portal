@@ -70,6 +70,7 @@ function mapColumns(headerRow) {
   const want = {
     clientStatus: ['client status'],
     cid: ['cid'],
+    hsid: ['hubspot company id'],
     company: ['company name'],
     closedDate: ['closed date'],
     csm: ['csm'],
@@ -140,6 +141,7 @@ function parseClientTable(grid) {
     clients.push({
       co: company,
       cid: (row[cols.cid] || '').trim(),
+      hsid: (row[cols.hsid] || '').trim(),
       closed: (row[cols.closedDate] || '').trim(),
       acct: acctRaw || 'Unknown',
       sw: sw || '—',

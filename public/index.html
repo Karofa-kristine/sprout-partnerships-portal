@@ -32,6 +32,9 @@
     <button class="tab active" data-tab="peoplebox" role="tab" aria-selected="true">
       <span class="tdot"></span>Peoplebox
     </button>
+    <button class="tab" data-tab="subs" role="tab" aria-selected="false">
+      <span class="tdot"></span>Peoplebox Subscriptions
+    </button>
   </nav>
 
   <div id="loading" class="statebox"><div class="sp"></div>Loading client data from the source sheet…</div>
@@ -104,6 +107,31 @@
     </div>
   </div>
 
+  <div class="wrap tabpanel hide" id="subsPanel" data-tab="subs">
+    <div class="section-head"><h2>Peoplebox recurring subscriptions</h2><span class="note" id="subsNote">from RADAR · NetSuite invoice line items · matched by HubSpot Company ID</span></div>
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="subsSearch" type="text" placeholder="Search client / invoice / item…" autocomplete="off"/>
+      </div>
+      <button class="btn" id="subsRefresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        Refresh
+      </button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Client</th><th>Item Display</th><th>Invoice Reference</th><th>Recurring Subscription (Peoplebox remarks)</th>
+          </tr></thead>
+          <tbody id="subsBody"><tr><td colspan="4"><div class="empty">Open this tab to load subscriptions.</div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="tablefoot" id="subsFoot"></div>
+    </div>
+  </div>
+
   <footer id="footer"></footer>
 
   <div class="overlay" id="overlay"></div>
@@ -127,7 +155,57 @@
         document.querySelectorAll('.tabpanel').forEach(function(p){
           p.classList.toggle('hide', p.dataset.tab !== tab);
         });
+        if(tab === 'subs') loadSubs();
       });
+
+      // ---- Peoplebox Subscriptions (RADAR) ----
+      var subsLoaded = false, subsData = [];
+      var esc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); };
+
+      function renderSubs(){
+        var q = (document.getElementById('subsSearch').value || '').toLowerCase();
+        var rows = subsData.filter(function(r){
+          if(!q) return true;
+          return [r.client, r.item_display, r.invoice_ref, r.recurring_sub].some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; });
+        });
+        var tb = document.getElementById('subsBody');
+        if(!rows.length){
+          tb.innerHTML = "<tr><td colspan='4'><div class='empty'><strong>No matching subscriptions.</strong></div></td></tr>";
+        } else {
+          tb.innerHTML = rows.map(function(r){
+            return "<tr><td style='font-weight:600'>" + esc(r.client||'—') + "</td>" +
+              "<td>" + esc(r.item_display||'—') + "</td>" +
+              "<td class='num' style='font-size:12.5px'>" + esc(r.invoice_ref||'—') + "</td>" +
+              "<td>" + esc(r.recurring_sub||'—') + "</td></tr>";
+          }).join('');
+        }
+        document.getElementById('subsFoot').textContent = 'Showing ' + rows.length + ' of ' + subsData.length + ' subscription line items.';
+      }
+
+      function loadSubs(force){
+        if(subsLoaded && !force) return;
+        var tb = document.getElementById('subsBody');
+        tb.innerHTML = "<tr><td colspan='4'><div class='empty'>Loading subscriptions from RADAR…</div></td></tr>";
+        fetch('/api/subscriptions' + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
+          .then(function(res){ if(!res.ok) return res.json().then(function(j){ throw new Error(j.message || ('HTTP '+res.status)); }); return res.json(); })
+          .then(function(data){
+            subsLoaded = true;
+            if(!data.configured){
+              tb.innerHTML = "<tr><td colspan='4'><div class='empty'><strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server to enable this tab.</div></td></tr>";
+              document.getElementById('subsFoot').textContent = '';
+              return;
+            }
+            subsData = data.rows || [];
+            document.getElementById('subsNote').textContent = 'from RADAR · ' + subsData.length + ' Peoplebox recurring-subscription line items across ' + (data.clientCount||0) + ' clients (matched by HubSpot Company ID)';
+            renderSubs();
+          })
+          .catch(function(err){
+            tb.innerHTML = "<tr><td colspan='4'><div class='empty' style='color:#c23a3a'><strong>Could not load subscriptions.</strong>" + esc(err.message) + "</div></td></tr>";
+          });
+      }
+
+      document.getElementById('subsSearch').addEventListener('input', renderSubs);
+      document.getElementById('subsRefresh').addEventListener('click', function(){ loadSubs(true); });
     })();
   </script>
 </body>

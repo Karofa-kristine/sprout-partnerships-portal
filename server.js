@@ -7,6 +7,7 @@ const session = require('express-session');
 
 const auth = require('./src/auth');
 const cache = require('./src/cache');
+const radar = require('./src/radar');
 const { readTab } = require('./src/sheets');
 const { transform } = require('./src/transform');
 
@@ -67,6 +68,31 @@ app.get('/api/data', auth.requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Failed to load sheet data:', err);
     res.status(502).json({ error: 'sheet_read_failed', message: err.message });
+  }
+});
+
+// ── Peoplebox subscriptions from RADAR (Databricks) ──────
+// Joins RADAR invoice line items to the tracker's clients by HubSpot Company ID.
+const SUBS_CACHE_KEY = 'radar-subscriptions';
+
+app.get('/api/subscriptions', auth.requireAuth, async (req, res) => {
+  try {
+    if (!radar.isConfigured()) {
+      return res.json({ configured: false, rows: [] });
+    }
+    const force = req.query.refresh === '1';
+    if (!force) {
+      const cached = cache.get(SUBS_CACHE_KEY);
+      if (cached) return res.json({ configured: true, cached: true, rows: cached });
+    }
+    const data = await loadData({});
+    const ids = [...new Set((data.clients || []).map((c) => c.hsid).filter(Boolean))];
+    const rows = await radar.subscriptions(ids);
+    cache.set(SUBS_CACHE_KEY, rows, TTL);
+    res.json({ configured: true, cached: false, clientCount: ids.length, rows });
+  } catch (err) {
+    console.error('Failed to load RADAR subscriptions:', err);
+    res.status(502).json({ error: 'radar_failed', message: err.message });
   }
 });
 
