@@ -148,7 +148,6 @@ function uniq(a) { var o = {}, r = []; a.forEach(function (v) { if (v && !o[v]) 
 function populateFilters() {
   var cs = DATA.clients;
   uniq(cs.map(function (c) { return c.acct; })).sort().forEach(function (v) { var o = el('option', null, v); o.value = v; $('#fStatus').appendChild(o); });
-  uniq(cs.map(function (c) { return c.sw; }).filter(function (v) { return v && v !== '—'; })).sort().forEach(function (v) { var o = el('option', null, v); o.value = v; $('#fSwitch').appendChild(o); });
   uniq(cs.map(function (c) { return c.paidSprout; }).filter(function (v) { return v && v !== '—'; })).sort().forEach(function (v) { var o = el('option', null, v); o.value = v; $('#fPaid').appendChild(o); });
   uniq(cs.map(function (c) { return c.csm; })).sort().forEach(function (v) { var o = el('option', null, v); o.value = v; $('#fCsm').appendChild(o); });
 }
@@ -156,7 +155,6 @@ function filtered() {
   var rows = DATA.clients.filter(function (c) {
     if (state.q && c.co.toLowerCase().indexOf(state.q.toLowerCase()) < 0) return false;
     if (state.status && c.acct !== state.status) return false;
-    if (state.sw && c.sw !== state.sw) return false;
     if (state.paid && c.paidSprout !== state.paid) return false;
     if (state.csm && c.csm !== state.csm) return false;
     return true;
@@ -180,7 +178,6 @@ function renderChips() {
   }
   if (state.q) add('Search: “' + state.q + '”', 'q');
   if (state.status) add('Account: ' + state.status, 'status');
-  if (state.sw) add('Switch: ' + state.sw, 'sw');
   if (state.paid) add('Paid to Sprout: ' + state.paid, 'paid');
   if (state.csm) add('CSM: ' + state.csm, 'csm');
 }
@@ -203,7 +200,7 @@ function render() {
       tr.innerHTML =
         "<td class='co'><span class='stripe' style='background:" + (isA ? 'var(--s-active)' : 'var(--s-neutral)') + "'></span>" + esc(c.co) + "<span class='cid'>" + esc(c.cid) + '</span></td>' +
         "<td><span class='pill' style='background:" + (isA ? 'var(--accent-soft)' : '#F0EFEF') + ';color:' + (isA ? 'var(--accent)' : 'var(--s-neutral)') + "'><span class='d' style='background:" + (isA ? 'var(--accent)' : 'var(--s-neutral)') + "'></span>" + esc(c.acct) + '</span></td>' +
-        '<td>' + (c.sw === '—' ? "<span style='color:var(--faint)'>—</span>" : "<span class='pill' style='background:var(--surface-2);border:1px solid var(--border);color:" + (SWITCH_COLOR[c.sw] || 'var(--text)') + "'><span class='d' style='background:" + (SWITCH_COLOR[c.sw] || 'var(--text)') + "'></span>" + esc(c.sw) + '</span>') + '</td>' +
+        '<td>' + billPill(c.act, /activated/i) + '</td>' +
         '<td>' + billPill(c.paidSprout, /^paid$/i) + '</td>' +
         '<td>' + billPill(c.pboxInvoiced, /^yes$/i) + '</td>' +
         '<td>' + billPill(c.pboxInvoice, /^paid$/i) + '</td>' +
@@ -219,7 +216,7 @@ function render() {
   $('#tablefoot').textContent = 'Showing ' + rows.length + ' of ' + DATA.clients.length + ' client records.';
   $('#rosterNote').textContent = DATA.clients.length + ' records · live from source sheet';
 }
-function syncControls() { $('#search').value = state.q; $('#fStatus').value = state.status; $('#fSwitch').value = state.sw; $('#fPaid').value = state.paid; $('#fCsm').value = state.csm; }
+function syncControls() { $('#search').value = state.q; $('#fStatus').value = state.status; $('#fPaid').value = state.paid; $('#fCsm').value = state.csm; }
 
 /* ---------- drawer ---------- */
 function fieldRow(k, v, mono) { return "<div class='field'><div class='k'>" + esc(k) + "</div><div class='v" + (mono ? ' mono' : '') + "'>" + (v == null || v === '' ? "<span style='color:var(--faint);font-weight:400'>—</span>" : esc(v)) + '</div></div>'; }
@@ -337,7 +334,6 @@ setInterval(function () { if (DATA) load(false, true); }, 60000);
 
 $('#search').addEventListener('input', function (e) { state.q = e.target.value; render(); });
 $('#fStatus').addEventListener('change', function (e) { state.status = e.target.value; render(); });
-$('#fSwitch').addEventListener('change', function (e) { state.sw = e.target.value; render(); });
 $('#fPaid').addEventListener('change', function (e) { state.paid = e.target.value; render(); });
 $('#fCsm').addEventListener('change', function (e) { state.csm = e.target.value; render(); });
 $('#clearBtn').addEventListener('click', function () { state = { q: '', status: '', sw: '', paid: '', csm: '' }; syncControls(); render(); });
