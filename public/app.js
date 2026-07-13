@@ -194,7 +194,7 @@ function render() {
   renderChips(); renderSortIndicators();
   var rows = filtered(), tb = $('#tbody'); tb.innerHTML = '';
   if (!rows.length) {
-    tb.appendChild(el('tr', null, "<td colspan='10'><div class='empty'><strong>No clients match these filters.</strong>Try clearing a filter or searching a different name.</div></td>"));
+    tb.appendChild(el('tr', null, "<td colspan='9'><div class='empty'><strong>No clients match these filters.</strong>Try clearing a filter or searching a different name.</div></td>"));
   } else {
     rows.forEach(function (c) {
       var tr = el('tr'); tr.tabIndex = 0;
@@ -208,7 +208,6 @@ function render() {
         '<td>' + billPill(c.pboxInvoice, /^paid$/i) + '</td>' +
         "<td class='csm'>" + (c.csm === 'Unassigned' ? "<span style='color:var(--faint)'>Unassigned</span>" : esc(c.csm)) + '</td>' +
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.end || '—') + '</td>' +
-        '<td>' + sparkline(c.hc, 96, 26) + '</td>' +
         "<td class='r hc num'>" + (hc == null ? '—' : hc) + '</td>';
       tr.onclick = function () { openDrawer(c); };
       tr.onkeydown = function (e) { if (e.key === 'Enter') openDrawer(c); };
