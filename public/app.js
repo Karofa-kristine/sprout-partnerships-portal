@@ -8,7 +8,7 @@ var STATUS_COLORS = [
   { re: /endorsed/, c: 'var(--s-endorsed)' },
   { re: /new won deal/, c: 'var(--s-won)' },
 ];
-var INT_PALETTE = ['#1B7A56', '#2563B8', '#C2841C', '#D9A441', '#7A4BC4', '#8A938C', '#B0563E'];
+var INT_PALETTE = ['#17872F', '#2563B8', '#C2841C', '#D9A441', '#7A4BC4', '#8A938C', '#B0563E'];
 var KPI_TONE = { active: 'var(--s-active)', ongoing: 'var(--s-ongoing)', indigo: 'var(--indigo)', onhold: 'var(--s-onhold)' };
 var SWITCH_COLOR = {
   'Pbox Won': 'var(--s-active)', 'Under Nego': 'var(--s-ongoing)', 'for Demoing': 'var(--indigo)',
