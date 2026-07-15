@@ -73,8 +73,9 @@ async function runStatement(sql) {
 }
 
 /**
- * Peoplebox recurring-subscription line items for a set of HubSpot Company IDs.
- * Returns [{ client, hsid, item_display, invoice_ref, recurring_sub }].
+ * All NetSuite invoice line items for a set of HubSpot Company IDs.
+ * Returns [{ client, hsid, item_display, invoice_ref, invoice_status, recurring_sub }].
+ * (recurring_sub = line_description, i.e. the Peoplebox remarks.)
  */
 async function subscriptions(hubspotIds) {
   const ids = [...new Set((hubspotIds || []).filter(Boolean))];
@@ -91,9 +92,6 @@ async function subscriptions(hubspotIds) {
     FROM ${LINES} l
     JOIN ${SUMMARY} s ON l.invoice_id = s.invoice_id
     WHERE s.hubspot_company_id IN (${inList})
-      AND (l.item_display_name ILIKE '%peoplebox%' OR l.line_description ILIKE '%peoplebox%')
-      AND (l.item_display_name ILIKE '%recur%' OR l.item_display_name ILIKE '%subscription%'
-           OR l.line_description ILIKE '%recur%' OR l.line_description ILIKE '%subscription%')
     ORDER BY client, s.invoice_number
     LIMIT 5000`;
   return runStatement(sql);

@@ -104,7 +104,7 @@
   </div>
 
   <div class="wrap tabpanel hide" id="subsPanel" data-tab="subs">
-    <div class="section-head"><h2>Peoplebox recurring subscriptions</h2><span class="note" id="subsNote">from RADAR · NetSuite invoice line items · matched by HubSpot Company ID</span></div>
+    <div class="section-head"><h2>Peoplebox invoice line items</h2><span class="note" id="subsNote">from RADAR · NetSuite invoice line items · matched by HubSpot Company ID</span></div>
     <div class="toolbar">
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -194,7 +194,7 @@
               return;
             }
             subsData = data.rows || [];
-            document.getElementById('subsNote').textContent = 'from RADAR · ' + subsData.length + ' Peoplebox recurring-subscription line items across ' + (data.clientCount||0) + ' clients (matched by HubSpot Company ID)';
+            document.getElementById('subsNote').textContent = 'from RADAR · ' + subsData.length + ' invoice line items across ' + (data.clientCount||0) + ' clients (matched by HubSpot Company ID)';
             renderSubs();
           })
           .catch(function(err){
