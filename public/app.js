@@ -10,6 +10,25 @@ var STATUS_COLORS = [
 ];
 var INT_PALETTE = ['#17872F', '#2563B8', '#C2841C', '#D9A441', '#7A4BC4', '#8A938C', '#B0563E'];
 var KPI_TONE = { active: 'var(--s-active)', ongoing: 'var(--s-ongoing)', indigo: 'var(--indigo)', onhold: 'var(--s-onhold)' };
+var SVG = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>";
+var ICONS = {
+  active: SVG + "<path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/><path d='m9 11 3 3L22 4'/></svg>",
+  ongoing: SVG + "<path d='M21 12a9 9 0 1 1-2.64-6.36'/><path d='M21 3v6h-6'/></svg>",
+  integration: SVG + "<path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>",
+  pending: SVG + "<circle cx='12' cy='12' r='10'/><path d='M12 6v6l4 2'/></svg>",
+  clients: SVG + "<path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/></svg>",
+  invoice: SVG + "<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><path d='M14 2v6h6'/><path d='M16 13H8M16 17H8M10 9H8'/></svg>",
+  settled: SVG + "<path d='M18 6 7 17l-5-5'/><path d='m22 10-7.5 7.5L13 16'/></svg>",
+};
+var TONE_ICON = { active: 'active', ongoing: 'ongoing', indigo: 'integration', onhold: 'pending' };
+function kpiCard(opts) {
+  var color = opts.color || 'var(--accent)';
+  return "<div class='kpi" + (opts.hero ? ' hero' : '') + "' style='--c:" + color + "'>" +
+    "<div class='kpi-top'><div class='ico'>" + (ICONS[opts.icon] || ICONS.clients) + "</div></div>" +
+    "<div class='val num'>" + opts.val + "</div>" +
+    "<div class='name'>" + esc(opts.name) + "</div>" +
+    "<div class='meta'>" + esc(opts.meta) + "</div></div>";
+}
 var SWITCH_COLOR = {
   'Pbox Won': 'var(--s-active)', 'Under Nego': 'var(--s-ongoing)', 'for Demoing': 'var(--indigo)',
   'Not yet offered': 'var(--s-onhold)', 'Not interested': 'var(--s-neutral)', '—': 'var(--faint)',
@@ -93,31 +112,25 @@ function trendChart(hcFull) {
 /* ---------- sections ---------- */
 function renderKPIs() {
   var c = $('#kpis'); c.innerHTML = '';
-  DATA.kpis.forEach(function (k) {
-    var color = KPI_TONE[k.tone] || 'var(--accent)';
-    var d = el('div', 'kpi');
-    d.innerHTML = "<div class='bar' style='background:" + color + "'></div>" +
-      "<div class='val num' style='color:" + color + "'>" + k.val + '</div>' +
-      "<div class='name'>" + esc(k.name) + "</div><div class='meta'>" + esc(k.meta) + '</div>';
-    c.appendChild(d);
+  DATA.kpis.forEach(function (k, i) {
+    c.insertAdjacentHTML('beforeend', kpiCard({
+      val: k.val, name: k.name, meta: k.meta,
+      color: KPI_TONE[k.tone] || 'var(--accent)',
+      icon: TONE_ICON[k.tone] || 'clients',
+      hero: i === 0,
+    }));
   });
 }
 function pct(n, d) { return d ? Math.round((n / d) * 100) + '%' : '0%'; }
 function renderBilling() {
   var b = DATA.billing, c = $('#billing'); if (!b || !c) return; c.innerHTML = '';
   var cards = [
-    { val: b.paidToSprout, color: 'var(--s-active)', name: 'Paid to Sprout', meta: 'of ' + b.total + ' clients · ' + pct(b.paidToSprout, b.total) + ' settled' },
-    { val: b.pendingToSprout, color: 'var(--s-onhold)', name: 'Not yet paid to Sprout', meta: pct(b.pendingToSprout, b.total) + ' of clients · payment pending' },
-    { val: b.invoicedByPbox, color: 'var(--indigo)', name: 'Invoiced by Peoplebox', meta: 'have a Peoplebox invoice issued' },
-    { val: b.pboxInvoicePaid, color: 'var(--s-ongoing)', name: 'Peoplebox invoice settled', meta: 'Peoplebox invoices marked paid' },
+    { val: b.paidToSprout, color: 'var(--s-active)', icon: 'active', name: 'Paid to Sprout', meta: 'of ' + b.total + ' clients · ' + pct(b.paidToSprout, b.total) + ' settled' },
+    { val: b.pendingToSprout, color: 'var(--s-onhold)', icon: 'pending', name: 'Not yet paid to Sprout', meta: pct(b.pendingToSprout, b.total) + ' of clients · payment pending' },
+    { val: b.invoicedByPbox, color: 'var(--indigo)', icon: 'invoice', name: 'Invoiced by Peoplebox', meta: 'have a Peoplebox invoice issued' },
+    { val: b.pboxInvoicePaid, color: 'var(--s-ongoing)', icon: 'settled', name: 'Peoplebox invoice settled', meta: 'Peoplebox invoices marked paid' },
   ];
-  cards.forEach(function (k) {
-    var d = el('div', 'kpi');
-    d.innerHTML = "<div class='bar' style='background:" + k.color + "'></div>" +
-      "<div class='val num' style='color:" + k.color + "'>" + k.val + '</div>' +
-      "<div class='name'>" + esc(k.name) + "</div><div class='meta'>" + esc(k.meta) + '</div>';
-    c.appendChild(d);
-  });
+  cards.forEach(function (k) { c.insertAdjacentHTML('beforeend', kpiCard(k)); });
   $('#billingNote').textContent = b.total + ' clients · billing status from source sheet';
 }
 function renderDonut() {
