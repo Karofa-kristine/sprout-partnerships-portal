@@ -48,6 +48,20 @@ function requireProduct(product) {
   };
 }
 
+// Every internal + partner domain must be able to SIGN IN (access to specific
+// products is enforced separately, per tile). Augment ALLOWED_EMAIL_DOMAINS in
+// code so partners aren't blocked at the Google gate even if the env var wasn't
+// updated on the host.
+(function ensureSignInDomains() {
+  const set = {};
+  (process.env.ALLOWED_EMAIL_DOMAINS || 'sprout.ph')
+    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+    .concat(internalDomains())
+    .concat(Object.values(PRODUCT_DOMAINS))
+    .forEach((d) => { if (d) set[d] = 1; });
+  process.env.ALLOWED_EMAIL_DOMAINS = Object.keys(set).join(',');
+})();
+
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(
