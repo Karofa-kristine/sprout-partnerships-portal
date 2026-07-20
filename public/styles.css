@@ -38,6 +38,9 @@ button{font-family:inherit;cursor:pointer;}
 /* top bar */
 .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:18px;padding:14px 28px;background:rgba(246,248,246,.86);backdrop-filter:saturate(140%) blur(10px);border-bottom:1px solid var(--border);border-top:3px solid var(--brand);}
 .brand{display:flex;align-items:center;gap:11px;}
+.brand[data-goto]{cursor:pointer;border-radius:10px;transition:opacity .15s;}
+.brand[data-goto]:hover{opacity:.75;}
+.brand[data-goto]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
 .leaf{width:30px;height:30px;border-radius:9px;background:#fff;border:1px solid var(--border);display:grid;place-items:center;overflow:hidden;box-shadow:0 2px 8px rgba(47,191,23,.28);}
 .leaf img{width:84%;height:84%;object-fit:contain;}
 .brand h1{font-size:16px;font-weight:700;margin:0;letter-spacing:-.01em;}

@@ -9,17 +9,13 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="brand">
+    <div class="brand" data-goto="overview" role="button" tabindex="0" title="Back to Overview">
       <div class="leaf"><img src="/sprout-leaf.png" alt="Sprout"/></div>
       <div>
         <h1>Sprout Partnerships Portal</h1>
         <div class="sub">Partner Products · Sprout Operations</div>
       </div>
     </div>
-    <button class="btn" id="homeBtn" data-goto="overview" style="display:none" title="Back to all partner products">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-      Overview
-    </button>
     <div class="spacer"></div>
     <div class="refresh-meta">
       <div class="lbl eyebrow">Last refreshed</div>
@@ -259,8 +255,6 @@
         document.querySelectorAll('.tabpanel').forEach(function(p){
           p.classList.toggle('hide', p.dataset.tab !== tab);
         });
-        var home = document.getElementById('homeBtn');
-        if(home) home.style.display = (tab === 'overview') ? 'none' : '';
         // The Peoplebox panel's visibility is otherwise managed by app.js; make
         // sure it's shown (its inner spinner covers the not-yet-loaded case).
         if(tab === 'peoplebox'){ var a = document.getElementById('app'); if(a) a.style.display = ''; }
@@ -274,6 +268,12 @@
       document.addEventListener('click', function(e){
         var g = e.target.closest('[data-goto]'); if(!g) return;
         activateTab(g.dataset.goto);
+      });
+      // Keyboard activation for non-button [data-goto] elements (e.g. the logo).
+      document.addEventListener('keydown', function(e){
+        if(e.key !== 'Enter' && e.key !== ' ') return;
+        var g = e.target.closest && e.target.closest('[data-goto][role="button"]'); if(!g) return;
+        e.preventDefault(); activateTab(g.dataset.goto);
       });
 
       // Show only the tiles the signed-in account may open.
