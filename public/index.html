@@ -30,7 +30,10 @@
 
   <div class="shell">
   <nav class="tabs" id="tabs" role="tablist" aria-label="Partner products">
-    <button class="tab active" data-tab="peoplebox" role="tab" aria-selected="true">
+    <button class="tab active" data-tab="overview" role="tab" aria-selected="true">
+      <span class="tdot"></span>Overview
+    </button>
+    <button class="tab" data-tab="peoplebox" role="tab" aria-selected="false">
       <span class="tdot"></span>Peoplebox
     </button>
     <button class="tab" data-tab="subs" role="tab" aria-selected="false">
@@ -48,10 +51,38 @@
   </nav>
   <div class="content">
 
-  <div id="loading" class="statebox"><div class="sp"></div>Loading client data from the source sheet…</div>
-  <div id="error" class="statebox err" style="display:none"></div>
+  <div class="wrap tabpanel" id="overview" data-tab="overview">
+    <div class="overview-head">
+      <h2>Partner Products</h2>
+      <p>Live client monitoring across Sprout's partner products. Select a product to open its report.</p>
+    </div>
+    <div class="ptiles" id="ptiles">
+      <button class="ptile" data-goto="peoplebox" style="--c:#4B53C4">
+        <div class="ptile-badge"><img src="/logos/peoplebox.png" alt="" onerror="this.remove()"/><span class="mono">P</span></div>
+        <div><div class="nm">Peoplebox</div><div class="desc">Performance, OKRs &amp; client roster</div></div>
+        <span class="go">Open report →</span>
+      </button>
+      <button class="ptile" data-goto="teamtailor" style="--c:#E8544E">
+        <div class="ptile-badge"><img src="/logos/teamtailor.png" alt="" onerror="this.remove()"/><span class="mono">TT</span></div>
+        <div><div class="nm">Teamtailor</div><div class="desc">Recruitment &amp; applicant tracking</div></div>
+        <span class="go">Open report →</span>
+      </button>
+      <button class="ptile" data-goto="disprz" style="--c:#1F7AE0">
+        <div class="ptile-badge"><img src="/logos/disprz.png" alt="" onerror="this.remove()"/><span class="mono">D</span></div>
+        <div><div class="nm">Disprz</div><div class="desc">Learning &amp; upskilling</div></div>
+        <span class="go">Open report →</span>
+      </button>
+      <button class="ptile" data-goto="hubstaff" style="--c:#17B5B0">
+        <div class="ptile-badge"><img src="/logos/hubstaff.png" alt="" onerror="this.remove()"/><span class="mono">H</span></div>
+        <div><div class="nm">Hubstaff</div><div class="desc">Time tracking &amp; workforce analytics</div></div>
+        <span class="go">Open report →</span>
+      </button>
+    </div>
+  </div>
 
-  <div class="wrap tabpanel" id="app" data-tab="peoplebox" style="display:none">
+  <div class="wrap tabpanel hide" id="app" data-tab="peoplebox" style="display:none">
+    <div id="loading" class="statebox"><div class="sp"></div>Loading client data from the source sheet…</div>
+    <div id="error" class="statebox err" style="display:none"></div>
     <div class="banner">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
       <div><b>Data fidelity:</b> Portfolio KPIs, charts, and the client roster are all built from the per-client records in the Peoplebox tab. The status donut tallies each client's <b>Client Status</b>; the integration breakdown tallies each client's <b>Data Sync &amp; SSO Activation Status</b>. Monthly headcount columns are shown when populated in the sheet.</div>
@@ -220,24 +251,39 @@
 
   <script src="/app.js"></script>
   <script>
-    // Tab switcher. Peoplebox is the only tab today; adding another is just a
-    // <button class="tab" data-tab="x"> above + a matching .tabpanel data-tab="x".
+    // Tab switcher. Adding a tab is just a <button class="tab" data-tab="x">
+    // in the sidebar + a matching .tabpanel data-tab="x". The Overview tiles
+    // navigate via activateTab() too (data-goto="x").
     (function(){
       var nav = document.getElementById('tabs');
       if(!nav) return;
-      nav.addEventListener('click', function(e){
-        var btn = e.target.closest('.tab'); if(!btn) return;
-        var tab = btn.dataset.tab;
+
+      function activateTab(tab){
         nav.querySelectorAll('.tab').forEach(function(t){
-          var on = t === btn;
+          var on = t.dataset.tab === tab;
           t.classList.toggle('active', on);
           t.setAttribute('aria-selected', on ? 'true' : 'false');
         });
         document.querySelectorAll('.tabpanel').forEach(function(p){
           p.classList.toggle('hide', p.dataset.tab !== tab);
         });
+        // The Peoplebox panel's visibility is otherwise managed by app.js; make
+        // sure it's shown (its inner spinner covers the not-yet-loaded case).
+        if(tab === 'peoplebox'){ var a = document.getElementById('app'); if(a) a.style.display = ''; }
         if(tab === 'subs') loadSubs();
         if(reports[tab]) reports[tab].load();
+        if(window.scrollTo) window.scrollTo(0, 0);
+      }
+
+      nav.addEventListener('click', function(e){
+        var btn = e.target.closest('.tab'); if(!btn) return;
+        activateTab(btn.dataset.tab);
+      });
+
+      var tiles = document.getElementById('ptiles');
+      if(tiles) tiles.addEventListener('click', function(e){
+        var tile = e.target.closest('.ptile'); if(!tile) return;
+        activateTab(tile.dataset.goto);
       });
 
       // ---- Peoplebox Subscriptions (RADAR) ----
