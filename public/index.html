@@ -16,6 +16,10 @@
         <div class="sub">Partner Products · Sprout Operations</div>
       </div>
     </div>
+    <button class="btn" id="homeBtn" style="display:none" title="Back to all partner products">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      Overview
+    </button>
     <div class="spacer"></div>
     <div class="refresh-meta">
       <div class="lbl eyebrow">Last refreshed</div>
@@ -29,26 +33,6 @@
   </div>
 
   <div class="shell">
-  <nav class="tabs" id="tabs" role="tablist" aria-label="Partner products">
-    <button class="tab active" data-tab="overview" role="tab" aria-selected="true">
-      <span class="tdot"></span>Overview
-    </button>
-    <button class="tab" data-tab="peoplebox" role="tab" aria-selected="false">
-      <span class="tdot"></span>Peoplebox
-    </button>
-    <button class="tab" data-tab="subs" role="tab" aria-selected="false">
-      <span class="tdot"></span>Peoplebox Subscriptions
-    </button>
-    <button class="tab" data-tab="teamtailor" role="tab" aria-selected="false">
-      <span class="tdot"></span>Teamtailor
-    </button>
-    <button class="tab" data-tab="disprz" role="tab" aria-selected="false">
-      <span class="tdot"></span>Disprz
-    </button>
-    <button class="tab" data-tab="hubstaff" role="tab" aria-selected="false">
-      <span class="tdot"></span>Hubstaff
-    </button>
-  </nav>
   <div class="content">
 
   <div class="wrap tabpanel" id="overview" data-tab="overview">
@@ -60,6 +44,11 @@
       <button class="ptile" data-goto="peoplebox" style="--c:#5A2FC2">
         <div class="ptile-logo"><img src="/logos/peoplebox.jpg" alt="Peoplebox" onerror="this.remove()"/><span class="mono">P</span></div>
         <div><div class="nm">Peoplebox</div><div class="desc">Performance, OKRs &amp; client roster</div></div>
+        <span class="go">Open report →</span>
+      </button>
+      <button class="ptile" data-goto="subs" style="--c:#5A2FC2">
+        <div class="ptile-logo"><img src="/logos/peoplebox.jpg" alt="Peoplebox" onerror="this.remove()"/><span class="mono">P</span></div>
+        <div><div class="nm">Peoplebox Subscriptions</div><div class="desc">Invoice line items from RADAR</div></div>
         <span class="go">Open report →</span>
       </button>
       <button class="ptile" data-goto="teamtailor" style="--c:#E8544E">
@@ -251,22 +240,16 @@
 
   <script src="/app.js"></script>
   <script>
-    // Tab switcher. Adding a tab is just a <button class="tab" data-tab="x">
-    // in the sidebar + a matching .tabpanel data-tab="x". The Overview tiles
-    // navigate via activateTab() too (data-goto="x").
+    // Navigation. All access is via the Overview tiles (data-goto="x"); the
+    // top-bar "Overview" button returns home. Adding a report is a tile +
+    // a matching .tabpanel data-tab="x".
     (function(){
-      var nav = document.getElementById('tabs');
-      if(!nav) return;
-
       function activateTab(tab){
-        nav.querySelectorAll('.tab').forEach(function(t){
-          var on = t.dataset.tab === tab;
-          t.classList.toggle('active', on);
-          t.setAttribute('aria-selected', on ? 'true' : 'false');
-        });
         document.querySelectorAll('.tabpanel').forEach(function(p){
           p.classList.toggle('hide', p.dataset.tab !== tab);
         });
+        var home = document.getElementById('homeBtn');
+        if(home) home.style.display = (tab === 'overview') ? 'none' : '';
         // The Peoplebox panel's visibility is otherwise managed by app.js; make
         // sure it's shown (its inner spinner covers the not-yet-loaded case).
         if(tab === 'peoplebox'){ var a = document.getElementById('app'); if(a) a.style.display = ''; }
@@ -275,16 +258,14 @@
         if(window.scrollTo) window.scrollTo(0, 0);
       }
 
-      nav.addEventListener('click', function(e){
-        var btn = e.target.closest('.tab'); if(!btn) return;
-        activateTab(btn.dataset.tab);
-      });
-
       var tiles = document.getElementById('ptiles');
       if(tiles) tiles.addEventListener('click', function(e){
         var tile = e.target.closest('.ptile'); if(!tile) return;
         activateTab(tile.dataset.goto);
       });
+
+      var homeBtn = document.getElementById('homeBtn');
+      if(homeBtn) homeBtn.addEventListener('click', function(){ activateTab('overview'); });
 
       // ---- Peoplebox Subscriptions (RADAR) ----
       var subsLoaded = false, subsData = [];
