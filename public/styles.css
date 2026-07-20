@@ -93,6 +93,18 @@ button{font-family:inherit;cursor:pointer;}
 .filterbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;}
 .filterbar select.flt{max-width:220px;}
 
+/* in-report subscriptions entry card */
+.subnav-card{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:22px;box-shadow:var(--shadow);cursor:pointer;font:inherit;color:inherit;transition:transform .15s,box-shadow .15s,border-color .15s;}
+.subnav-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);border-color:color-mix(in srgb,var(--indigo) 40%,var(--border));}
+.subnav-card .ic{width:40px;height:40px;flex:none;border-radius:11px;display:grid;place-items:center;background:var(--indigo-soft);color:var(--indigo);}
+.subnav-card .ic svg{width:20px;height:20px;}
+.subnav-card .txt{display:flex;flex-direction:column;flex:1;min-width:0;}
+.subnav-card .txt b{font-size:14px;font-weight:700;}
+.subnav-card .txt small{font-size:12px;color:var(--muted);margin-top:1px;}
+.subnav-card .arr{color:var(--indigo);font-weight:700;font-size:16px;}
+.backlink{background:none;border:0;color:var(--muted);font-size:12.5px;font-weight:600;padding:0;margin:0 0 12px;cursor:pointer;}
+.backlink:hover{color:var(--accent);}
+
 /* layout */
 .wrap{max-width:1280px;margin:0 auto;padding:26px 28px 70px;}
 .section-head{display:flex;align-items:baseline;gap:12px;margin:0 0 14px;}

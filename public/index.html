@@ -16,7 +16,7 @@
         <div class="sub">Partner Products · Sprout Operations</div>
       </div>
     </div>
-    <button class="btn" id="homeBtn" style="display:none" title="Back to all partner products">
+    <button class="btn" id="homeBtn" data-goto="overview" style="display:none" title="Back to all partner products">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
       Overview
     </button>
@@ -46,11 +46,6 @@
         <div><div class="nm">Peoplebox</div><div class="desc">Human-like AI for hiring &amp; managing talent — AI interviews, performance reviews, OKRs &amp; compensation</div></div>
         <span class="go">Open report →</span>
       </button>
-      <button class="ptile" data-goto="subs" style="--c:#5A2FC2">
-        <div class="ptile-logo"><img src="/logos/peoplebox.jpg" alt="Peoplebox" onerror="this.remove()"/><span class="mono">P</span></div>
-        <div><div class="nm">Peoplebox Subscriptions</div><div class="desc">Invoice line items from RADAR</div></div>
-        <span class="go">Open report →</span>
-      </button>
       <button class="ptile" data-goto="teamtailor" style="--c:#E8544E">
         <div class="ptile-logo"><img src="/logos/teamtailor.png" alt="Teamtailor" onerror="this.remove()"/><span class="mono">TT</span></div>
         <div><div class="nm">Teamtailor</div><div class="desc">Recruitment &amp; applicant tracking</div></div>
@@ -76,6 +71,14 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
       <div><b>Data fidelity:</b> Portfolio KPIs, charts, and the client roster are all built from the per-client records in the Peoplebox tab. The status donut tallies each client's <b>Client Status</b>; the integration breakdown tallies each client's <b>Data Sync &amp; SSO Activation Status</b>. Monthly headcount columns are shown when populated in the sheet.</div>
     </div>
+
+    <button class="subnav-card" data-goto="subs">
+      <span class="ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      </span>
+      <span class="txt"><b>Peoplebox Subscriptions</b><small>Invoice line items from RADAR, matched by HubSpot Company ID</small></span>
+      <span class="arr">→</span>
+    </button>
 
     <div class="kpis" id="kpis"></div>
 
@@ -135,6 +138,7 @@
   </div>
 
   <div class="wrap tabpanel hide" id="subsPanel" data-tab="subs">
+    <button class="backlink" data-goto="peoplebox">← Back to Peoplebox</button>
     <div class="section-head"><h2>Peoplebox invoice line items</h2><span class="note" id="subsNote">from RADAR · NetSuite invoice line items · matched by HubSpot Company ID</span></div>
     <div class="toolbar">
       <div class="search">
@@ -258,14 +262,12 @@
         if(window.scrollTo) window.scrollTo(0, 0);
       }
 
-      var tiles = document.getElementById('ptiles');
-      if(tiles) tiles.addEventListener('click', function(e){
-        var tile = e.target.closest('.ptile'); if(!tile) return;
-        activateTab(tile.dataset.goto);
+      // One delegated handler: Overview tiles, the in-report subscriptions card,
+      // the back link, and the top-bar Overview button all use [data-goto].
+      document.addEventListener('click', function(e){
+        var g = e.target.closest('[data-goto]'); if(!g) return;
+        activateTab(g.dataset.goto);
       });
-
-      var homeBtn = document.getElementById('homeBtn');
-      if(homeBtn) homeBtn.addEventListener('click', function(){ activateTab('overview'); });
 
       // ---- Peoplebox Subscriptions (RADAR) ----
       var subsLoaded = false, subsData = [], subsFilters = { client:'', status:'' };
