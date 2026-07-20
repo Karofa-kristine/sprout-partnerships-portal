@@ -353,7 +353,9 @@
               document.getElementById('subsFoot').textContent = '';
               return;
             }
-            subsData = data.rows || [];
+            // Belt-and-suspenders: drop any cancelled invoices client-side too,
+            // so they never show even if the server returned a cached result.
+            subsData = (data.rows || []).filter(function(r){ return !/cancel/i.test(String(r.invoice_status||'')); });
             document.getElementById('subsNote').textContent = 'from RADAR · ' + subsData.length + ' invoice line items across ' + (data.clientCount||0) + ' clients (matched by HubSpot Company ID)';
             buildSubsFilters();
             renderSubs();

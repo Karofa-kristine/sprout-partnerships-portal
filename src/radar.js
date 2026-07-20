@@ -94,7 +94,7 @@ async function subscriptions(hubspotIds) {
     JOIN ${SUMMARY} s ON l.invoice_id = s.invoice_id
     WHERE s.hubspot_company_id IN (${inList})
       AND l.line_description ILIKE '%peoplebox%'
-      AND COALESCE(LOWER(s.invoice_status), '') NOT IN ('cancelled', 'canceled')
+      AND (s.invoice_status IS NULL OR LOWER(TRIM(s.invoice_status)) NOT LIKE '%cancel%')
     ORDER BY client, s.invoice_number
     LIMIT 5000`;
   return runStatement(sql);
