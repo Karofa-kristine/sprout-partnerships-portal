@@ -248,7 +248,14 @@
     // top-bar "Overview" button returns home. Adding a report is a tile +
     // a matching .tabpanel data-tab="x".
     (function(){
+      // Per-product access: each partner domain sees only its own product;
+      // internal Sprout accounts see all. Enforced on the server too.
+      var ACCESS = null;
+      function productOf(tab){ return tab === 'subs' ? 'peoplebox' : tab; }
+      function canAccess(tab){ if(tab === 'overview') return true; return !!ACCESS && ACCESS.indexOf(productOf(tab)) >= 0; }
+
       function activateTab(tab){
+        if(!canAccess(tab)) return;
         document.querySelectorAll('.tabpanel').forEach(function(p){
           p.classList.toggle('hide', p.dataset.tab !== tab);
         });
@@ -268,6 +275,23 @@
         var g = e.target.closest('[data-goto]'); if(!g) return;
         activateTab(g.dataset.goto);
       });
+
+      // Show only the tiles the signed-in account may open.
+      fetch('/api/access', { credentials: 'same-origin' })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(a){
+          ACCESS = (a && a.products) || [];
+          var shown = 0;
+          document.querySelectorAll('.ptile').forEach(function(t){
+            var ok = ACCESS.indexOf(productOf(t.dataset.goto)) >= 0;
+            t.style.display = ok ? '' : 'none';
+            if(ok) shown++;
+          });
+          if(!shown){
+            var grid = document.getElementById('ptiles');
+            if(grid) grid.innerHTML = "<div class='empty' style='padding:30px;color:var(--muted)'>Your account doesn't have access to any partner product yet. Contact Sprout Partnerships.</div>";
+          }
+        });
 
       // ---- Peoplebox Subscriptions (RADAR) ----
       var subsLoaded = false, subsData = [], subsFilters = { client:'', status:'' };

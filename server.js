@@ -18,6 +18,36 @@ const TAB = process.env.PEOPLEBOX_TAB || 'Peoplebox';
 const TTL = Number(process.env.CACHE_TTL_SECONDS || 300);
 const CACHE_KEY = 'peoplebox-data';
 
+// ── Per-product access control ───────────────────────────
+// Internal Sprout domains see every product. Each partner domain sees ONLY its
+// own product. Peoplebox Subscriptions rides on Peoplebox access.
+const PRODUCT_DOMAINS = {
+  peoplebox: 'peoplebox.ai',
+  teamtailor: 'teamtailor.com',
+  disprz: 'disprz.com',
+  hubstaff: 'hubstaff.com',
+};
+function internalDomains() {
+  return (process.env.INTERNAL_DOMAINS || 'sprout.ph')
+    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+}
+function userDomain(req) {
+  const email = (req.session && req.session.user && req.session.user.email) || '';
+  return (email.split('@')[1] || '').toLowerCase();
+}
+function allowedProducts(req) {
+  const d = userDomain(req);
+  if (internalDomains().includes(d)) return Object.keys(PRODUCT_DOMAINS);
+  return Object.keys(PRODUCT_DOMAINS).filter((k) => PRODUCT_DOMAINS[k] === d);
+}
+// Middleware: block a route unless the signed-in user may see `product`.
+function requireProduct(product) {
+  return function (req, res, next) {
+    if (allowedProducts(req).indexOf(product) >= 0) return next();
+    return res.status(403).json({ error: 'forbidden', message: 'Your account does not have access to this product.' });
+  };
+}
+
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(
@@ -60,7 +90,17 @@ async function loadData({ force } = {}) {
   return { ...data, cached: false };
 }
 
-app.get('/api/data', auth.requireAuth, async (req, res) => {
+// Which products the signed-in user may access (drives the Overview tiles).
+app.get('/api/access', auth.requireAuth, (req, res) => {
+  res.json({
+    email: (req.session.user && req.session.user.email) || '',
+    domain: userDomain(req),
+    internal: internalDomains().includes(userDomain(req)),
+    products: allowedProducts(req),
+  });
+});
+
+app.get('/api/data', auth.requireAuth, requireProduct('peoplebox'), async (req, res) => {
   try {
     const force = req.query.refresh === '1';
     const data = await loadData({ force });
@@ -75,7 +115,7 @@ app.get('/api/data', auth.requireAuth, async (req, res) => {
 // Joins RADAR invoice line items to the tracker's clients by HubSpot Company ID.
 const SUBS_CACHE_KEY = 'radar-subscriptions';
 
-app.get('/api/subscriptions', auth.requireAuth, async (req, res) => {
+app.get('/api/subscriptions', auth.requireAuth, requireProduct('peoplebox'), async (req, res) => {
   try {
     if (!radar.isConfigured()) {
       return res.json({ configured: false, rows: [] });
@@ -110,6 +150,9 @@ app.get('/api/rawtab/:key', auth.requireAuth, async (req, res) => {
   const key = req.params.key;
   const tab = RAW_TABS[key];
   if (!tab) return res.status(404).json({ error: 'unknown_tab' });
+  if (allowedProducts(req).indexOf(key) < 0) {
+    return res.status(403).json({ error: 'forbidden', message: 'Your account does not have access to this product.' });
+  }
   try {
     const force = req.query.refresh === '1';
     const cacheKey = 'rawtab-' + key;

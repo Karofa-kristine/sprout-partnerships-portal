@@ -22,8 +22,13 @@ services:
         value: Peoplebox
       - key: CACHE_TTL_SECONDS
         value: "60"
+      # Domains allowed to SIGN IN. Per-product access is then enforced by
+      # domain (see INTERNAL_DOMAINS + the per-product rules in server.js).
       - key: ALLOWED_EMAIL_DOMAINS
-        value: sprout.ph,peoplebox.ai
+        value: sprout.ph,peoplebox.ai,teamtailor.com,disprz.com,hubstaff.com
+      # Internal domains that can see ALL products (partners see only their own).
+      - key: INTERNAL_DOMAINS
+        value: sprout.ph
       # Optional individual emails (comma-separated); managed in the dashboard.
       - key: ALLOWED_EMAILS
         sync: false
