@@ -268,13 +268,34 @@
       if(homeBtn) homeBtn.addEventListener('click', function(){ activateTab('overview'); });
 
       // ---- Peoplebox Subscriptions (RADAR) ----
-      var subsLoaded = false, subsData = [];
+      var subsLoaded = false, subsData = [], subsFilters = { client:'', status:'' };
       var esc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); };
       var stColor = function(s){ s=String(s||'').toLowerCase(); return s==='paid'?'#17872F':s==='overdue'?'#c23a3a':s==='open'?'#C2841C':'var(--muted)'; };
+
+      function buildSubsFilters(){
+        var panel = document.getElementById('subsPanel');
+        var bar = document.getElementById('subsFilters');
+        if(!bar){ bar = document.createElement('div'); bar.className = 'filterbar'; bar.id = 'subsFilters'; panel.insertBefore(bar, panel.querySelector('.table-wrap')); }
+        bar.innerHTML = '';
+        function addSel(label, dataKey, filterKey){
+          var seen = {}, o = []; subsData.forEach(function(r){ var v = (r[dataKey]||'').trim(); if(v && !seen[v]){ seen[v] = 1; o.push(v); } }); o.sort();
+          var sel = document.createElement('select'); sel.className = 'flt';
+          sel.innerHTML = '<option value="">' + label + '</option>' + o.map(function(v){ return '<option>' + esc(v) + '</option>'; }).join('');
+          sel.addEventListener('change', function(){ subsFilters[filterKey] = sel.value; renderSubs(); });
+          bar.appendChild(sel);
+        }
+        addSel('All clients', 'client', 'client');
+        addSel('All invoice status', 'invoice_status', 'status');
+        var clr = document.createElement('button'); clr.className = 'btn'; clr.textContent = 'Clear';
+        clr.addEventListener('click', function(){ subsFilters = { client:'', status:'' }; bar.querySelectorAll('select').forEach(function(s){ s.value = ''; }); renderSubs(); });
+        bar.appendChild(clr);
+      }
 
       function renderSubs(){
         var q = (document.getElementById('subsSearch').value || '').toLowerCase();
         var rows = subsData.filter(function(r){
+          if(subsFilters.client && (r.client||'') !== subsFilters.client) return false;
+          if(subsFilters.status && (r.invoice_status||'') !== subsFilters.status) return false;
           if(!q) return true;
           return [r.client, r.item_display, r.invoice_ref, r.invoice_status, r.recurring_sub].some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; });
         });
@@ -308,6 +329,7 @@
             }
             subsData = data.rows || [];
             document.getElementById('subsNote').textContent = 'from RADAR · ' + subsData.length + ' invoice line items across ' + (data.clientCount||0) + ' clients (matched by HubSpot Company ID)';
+            buildSubsFilters();
             renderSubs();
           })
           .catch(function(err){
@@ -320,11 +342,37 @@
 
       // ---- Generic raw sheet-tab reports (Teamtailor, Disprz, Hubstaff) ----
       function makeRawReport(key, prefix, filename){
-        var loaded = false, data = { headers: [], rows: [] };
+        var loaded = false, data = { headers: [], rows: [] }, filters = {};
         var byId = function(suf){ return document.getElementById(prefix + suf); };
+        // Auto-build a dropdown filter for each column with a manageable number
+        // of distinct values (free-text search covers the high-cardinality ones).
+        function buildFilters(){
+          var panel = document.getElementById(prefix + 'Panel');
+          var bar = document.getElementById(prefix + 'Filters');
+          if(!bar){ bar = document.createElement('div'); bar.className = 'filterbar'; bar.id = prefix + 'Filters'; panel.insertBefore(bar, panel.querySelector('.table-wrap')); }
+          bar.innerHTML = ''; filters = {};
+          data.headers.forEach(function(h, ci){
+            var seen = {}, order = [];
+            data.rows.forEach(function(r){ var v = (r[ci] == null ? '' : String(r[ci]).trim()); if(v && !seen[v]){ seen[v] = 1; order.push(v); } });
+            if(order.length < 2 || order.length > 25) return;
+            order.sort();
+            var sel = document.createElement('select'); sel.className = 'flt';
+            sel.innerHTML = '<option value="">All ' + esc(h) + '</option>' + order.map(function(v){ return '<option>' + esc(v) + '</option>'; }).join('');
+            sel.addEventListener('change', function(){ if(sel.value) filters[ci] = sel.value; else delete filters[ci]; render(); });
+            bar.appendChild(sel);
+          });
+          if(bar.children.length){
+            var clr = document.createElement('button'); clr.className = 'btn'; clr.textContent = 'Clear';
+            clr.addEventListener('click', function(){ filters = {}; bar.querySelectorAll('select').forEach(function(s){ s.value = ''; }); render(); });
+            bar.appendChild(clr);
+          }
+        }
         function render(){
           var q = (byId('Search').value || '').toLowerCase();
-          var rows = data.rows.filter(function(r){ return !q || r.some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; }); });
+          var rows = data.rows.filter(function(r){
+            for(var ci in filters){ if(String(r[ci] == null ? '' : r[ci]).trim() !== filters[ci]) return false; }
+            return !q || r.some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; });
+          });
           byId('Head').innerHTML = '<tr>' + data.headers.map(function(h){ return '<th>' + esc(h) + '</th>'; }).join('') + '</tr>';
           var tb = byId('Body');
           if(!rows.length){
@@ -346,6 +394,7 @@
               loaded = true;
               data = { headers: d.headers || [], rows: d.rows || [] };
               byId('Note').textContent = data.rows.length + ' rows · ' + data.headers.length + ' columns · live from the source sheet';
+              buildFilters();
               render();
             })
             .catch(function(err){
