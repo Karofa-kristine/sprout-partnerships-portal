@@ -96,20 +96,28 @@ app.get('/api/subscriptions', auth.requireAuth, async (req, res) => {
   }
 });
 
-// ── Teamtailor tab (raw sheet dump) ──────────────────────
-// Reads the Teamtailor tab and returns all columns + rows generically, so the
-// portal reflects whatever the sheet holds (no fixed schema).
-const TEAMTAILOR_TAB = process.env.TEAMTAILOR_TAB || 'Teamtailor';
-const TT_CACHE_KEY = 'teamtailor-data';
+// ── Raw sheet-tab dumps (Teamtailor, Disprz, Hubstaff) ───
+// Reads a whitelisted tab and returns all columns + rows generically, so the
+// portal reflects whatever the sheet holds (no fixed schema). The key must be
+// in RAW_TABS — the route never reads an arbitrary caller-supplied tab name.
+const RAW_TABS = {
+  teamtailor: process.env.TEAMTAILOR_TAB || 'Teamtailor',
+  disprz: process.env.DISPRZ_TAB || 'Disprz',
+  hubstaff: process.env.HUBSTAFF_TAB || 'Hubstaff',
+};
 
-app.get('/api/teamtailor', auth.requireAuth, async (req, res) => {
+app.get('/api/rawtab/:key', auth.requireAuth, async (req, res) => {
+  const key = req.params.key;
+  const tab = RAW_TABS[key];
+  if (!tab) return res.status(404).json({ error: 'unknown_tab' });
   try {
     const force = req.query.refresh === '1';
+    const cacheKey = 'rawtab-' + key;
     if (!force) {
-      const cached = cache.get(TT_CACHE_KEY);
+      const cached = cache.get(cacheKey);
       if (cached) return res.json({ cached: true, ...cached });
     }
-    const grid = await readTab(SPREADSHEET_ID, TEAMTAILOR_TAB);
+    const grid = await readTab(SPREADSHEET_ID, tab);
     const hi = grid.findIndex((r) => r.some((c) => c && c.trim()));
     const headers = hi < 0 ? [] : grid[hi].map((c, i) => (c && c.trim() ? c.trim() : 'Column ' + (i + 1)));
     const rows = [];
@@ -119,11 +127,11 @@ app.get('/api/teamtailor', auth.requireAuth, async (req, res) => {
       rows.push(headers.map((_, i) => (row[i] == null ? '' : String(row[i]).trim())));
     }
     const out = { headers, rows };
-    cache.set(TT_CACHE_KEY, out, TTL);
+    cache.set(cacheKey, out, TTL);
     res.json({ cached: false, ...out });
   } catch (err) {
-    console.error('Failed to load Teamtailor data:', err);
-    res.status(502).json({ error: 'teamtailor_failed', message: err.message });
+    console.error('Failed to load tab', key, err);
+    res.status(502).json({ error: 'tab_failed', message: err.message });
   }
 });
 

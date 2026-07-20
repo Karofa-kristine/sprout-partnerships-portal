@@ -157,9 +157,9 @@ td.co .cid{display:block;font-size:10.5px;color:var(--faint);font-family:var(--f
 /* report tables (Peoplebox Subscriptions, Teamtailor): stretch to full width,
    size columns to their data — short columns shrink to content, text columns
    absorb the remaining space — with clean top-aligned wrapping. */
-#subsPanel table,#ttPanel table{table-layout:auto;width:100%;min-width:100%;}
-#subsPanel td,#ttPanel td{white-space:normal;word-break:break-word;vertical-align:top;}
-#subsPanel thead th,#ttPanel thead th{white-space:nowrap;vertical-align:bottom;}
+#subsPanel table,#ttPanel table,#dzPanel table,#hsPanel table{table-layout:auto;width:100%;min-width:100%;}
+#subsPanel td,#ttPanel td,#dzPanel td,#hsPanel td{white-space:normal;word-break:break-word;vertical-align:top;}
+#subsPanel thead th,#ttPanel thead th,#dzPanel thead th,#hsPanel thead th{white-space:nowrap;vertical-align:bottom;}
 /* Peoplebox Subscriptions: keep the short columns compact so the text ones stretch. */
 #subsPanel th:nth-child(3),#subsPanel td:nth-child(3),
 #subsPanel th:nth-child(4),#subsPanel td:nth-child(4){width:1%;white-space:nowrap;}

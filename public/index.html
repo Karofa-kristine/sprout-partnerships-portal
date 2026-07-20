@@ -39,6 +39,12 @@
     <button class="tab" data-tab="teamtailor" role="tab" aria-selected="false">
       <span class="tdot"></span>Teamtailor
     </button>
+    <button class="tab" data-tab="disprz" role="tab" aria-selected="false">
+      <span class="tdot"></span>Disprz
+    </button>
+    <button class="tab" data-tab="hubstaff" role="tab" aria-selected="false">
+      <span class="tdot"></span>Hubstaff
+    </button>
   </nav>
   <div class="content">
 
@@ -157,6 +163,54 @@
     </div>
   </div>
 
+  <div class="wrap tabpanel hide" id="dzPanel" data-tab="disprz">
+    <div class="section-head"><h2>Disprz</h2><span class="note" id="dzNote">live from the Disprz tab of the source sheet</span></div>
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="dzSearch" type="text" placeholder="Search…" autocomplete="off"/>
+      </div>
+      <button class="btn" id="dzExport">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Export CSV
+      </button>
+      <button class="btn" id="dzRefresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        Refresh
+      </button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table><thead id="dzHead"></thead><tbody id="dzBody"><tr><td><div class="empty">Open this tab to load Disprz data.</div></td></tr></tbody></table>
+      </div>
+      <div class="tablefoot" id="dzFoot"></div>
+    </div>
+  </div>
+
+  <div class="wrap tabpanel hide" id="hsPanel" data-tab="hubstaff">
+    <div class="section-head"><h2>Hubstaff</h2><span class="note" id="hsNote">live from the Hubstaff tab of the source sheet</span></div>
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="hsSearch" type="text" placeholder="Search…" autocomplete="off"/>
+      </div>
+      <button class="btn" id="hsExport">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Export CSV
+      </button>
+      <button class="btn" id="hsRefresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        Refresh
+      </button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table><thead id="hsHead"></thead><tbody id="hsBody"><tr><td><div class="empty">Open this tab to load Hubstaff data.</div></td></tr></tbody></table>
+      </div>
+      <div class="tablefoot" id="hsFoot"></div>
+    </div>
+  </div>
+
   <footer id="footer"></footer>
   </div><!-- /content -->
   </div><!-- /shell -->
@@ -183,7 +237,7 @@
           p.classList.toggle('hide', p.dataset.tab !== tab);
         });
         if(tab === 'subs') loadSubs();
-        if(tab === 'teamtailor') loadTT();
+        if(reports[tab]) reports[tab].load();
       });
 
       // ---- Peoplebox Subscriptions (RADAR) ----
@@ -237,53 +291,59 @@
       document.getElementById('subsSearch').addEventListener('input', renderSubs);
       document.getElementById('subsRefresh').addEventListener('click', function(){ loadSubs(true); });
 
-      // ---- Teamtailor (raw sheet tab) ----
-      var ttLoaded = false, ttData = { headers: [], rows: [] };
-
-      function renderTT(){
-        var q = (document.getElementById('ttSearch').value || '').toLowerCase();
-        var rows = ttData.rows.filter(function(r){ return !q || r.some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; }); });
-        document.getElementById('ttHead').innerHTML = '<tr>' + ttData.headers.map(function(h){ return '<th>' + esc(h) + '</th>'; }).join('') + '</tr>';
-        var tb = document.getElementById('ttBody');
-        if(!rows.length){
-          tb.innerHTML = "<tr><td colspan='" + Math.max(1, ttData.headers.length) + "'><div class='empty'><strong>No matching rows.</strong></div></td></tr>";
-        } else {
-          tb.innerHTML = rows.map(function(r){
-            return '<tr>' + ttData.headers.map(function(_, i){ return '<td>' + esc(r[i] != null && r[i] !== '' ? r[i] : '—') + '</td>'; }).join('') + '</tr>';
-          }).join('');
+      // ---- Generic raw sheet-tab reports (Teamtailor, Disprz, Hubstaff) ----
+      function makeRawReport(key, prefix, filename){
+        var loaded = false, data = { headers: [], rows: [] };
+        var byId = function(suf){ return document.getElementById(prefix + suf); };
+        function render(){
+          var q = (byId('Search').value || '').toLowerCase();
+          var rows = data.rows.filter(function(r){ return !q || r.some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; }); });
+          byId('Head').innerHTML = '<tr>' + data.headers.map(function(h){ return '<th>' + esc(h) + '</th>'; }).join('') + '</tr>';
+          var tb = byId('Body');
+          if(!rows.length){
+            tb.innerHTML = "<tr><td colspan='" + Math.max(1, data.headers.length) + "'><div class='empty'><strong>No matching rows.</strong></div></td></tr>";
+          } else {
+            tb.innerHTML = rows.map(function(r){
+              return '<tr>' + data.headers.map(function(_, i){ return '<td>' + esc(r[i] != null && r[i] !== '' ? r[i] : '—') + '</td>'; }).join('') + '</tr>';
+            }).join('');
+          }
+          byId('Foot').textContent = 'Showing ' + rows.length + ' of ' + data.rows.length + ' rows · ' + data.headers.length + ' columns.';
         }
-        document.getElementById('ttFoot').textContent = 'Showing ' + rows.length + ' of ' + ttData.rows.length + ' rows · ' + ttData.headers.length + ' columns.';
+        function load(force){
+          if(loaded && !force) return;
+          var tb = byId('Body');
+          tb.innerHTML = "<tr><td><div class='empty'>Loading data…</div></td></tr>";
+          fetch('/api/rawtab/' + key + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
+            .then(function(res){ if(!res.ok) return res.json().then(function(j){ throw new Error(j.message || ('HTTP '+res.status)); }); return res.json(); })
+            .then(function(d){
+              loaded = true;
+              data = { headers: d.headers || [], rows: d.rows || [] };
+              byId('Note').textContent = data.rows.length + ' rows · ' + data.headers.length + ' columns · live from the source sheet';
+              render();
+            })
+            .catch(function(err){
+              tb.innerHTML = "<tr><td><div class='empty' style='color:#c23a3a'><strong>Could not load data.</strong>" + esc(err.message) + "</div></td></tr>";
+            });
+        }
+        function exportCSV(){
+          var clean = function(v){ v = String(v==null?'':v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; };
+          var lines = [data.headers.map(clean).join(',')].concat(data.rows.map(function(r){ return data.headers.map(function(_, i){ return clean(r[i]); }).join(','); }));
+          var blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob); a.download = filename;
+          document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+        }
+        byId('Search').addEventListener('input', render);
+        byId('Refresh').addEventListener('click', function(){ load(true); });
+        byId('Export').addEventListener('click', exportCSV);
+        return { load: load };
       }
 
-      function loadTT(force){
-        if(ttLoaded && !force) return;
-        var tb = document.getElementById('ttBody');
-        tb.innerHTML = "<tr><td><div class='empty'>Loading Teamtailor data…</div></td></tr>";
-        fetch('/api/teamtailor' + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
-          .then(function(res){ if(!res.ok) return res.json().then(function(j){ throw new Error(j.message || ('HTTP '+res.status)); }); return res.json(); })
-          .then(function(data){
-            ttLoaded = true;
-            ttData = { headers: data.headers || [], rows: data.rows || [] };
-            document.getElementById('ttNote').textContent = ttData.rows.length + ' rows · ' + ttData.headers.length + ' columns · live from the Teamtailor tab';
-            renderTT();
-          })
-          .catch(function(err){
-            tb.innerHTML = "<tr><td><div class='empty' style='color:#c23a3a'><strong>Could not load Teamtailor data.</strong>" + esc(err.message) + "</div></td></tr>";
-          });
-      }
-
-      function ttExportCSV(){
-        var clean = function(v){ v = String(v==null?'':v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; };
-        var lines = [ttData.headers.map(clean).join(',')].concat(ttData.rows.map(function(r){ return ttData.headers.map(function(_, i){ return clean(r[i]); }).join(','); }));
-        var blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = 'teamtailor.csv';
-        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
-      }
-
-      document.getElementById('ttSearch').addEventListener('input', renderTT);
-      document.getElementById('ttRefresh').addEventListener('click', function(){ loadTT(true); });
-      document.getElementById('ttExport').addEventListener('click', ttExportCSV);
+      var reports = {
+        teamtailor: makeRawReport('teamtailor', 'tt', 'teamtailor.csv'),
+        disprz: makeRawReport('disprz', 'dz', 'disprz.csv'),
+        hubstaff: makeRawReport('hubstaff', 'hs', 'hubstaff.csv'),
+      };
     })();
   </script>
 </body>
