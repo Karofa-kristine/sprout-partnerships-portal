@@ -96,6 +96,37 @@ app.get('/api/subscriptions', auth.requireAuth, async (req, res) => {
   }
 });
 
+// ── Teamtailor tab (raw sheet dump) ──────────────────────
+// Reads the Teamtailor tab and returns all columns + rows generically, so the
+// portal reflects whatever the sheet holds (no fixed schema).
+const TEAMTAILOR_TAB = process.env.TEAMTAILOR_TAB || 'Teamtailor';
+const TT_CACHE_KEY = 'teamtailor-data';
+
+app.get('/api/teamtailor', auth.requireAuth, async (req, res) => {
+  try {
+    const force = req.query.refresh === '1';
+    if (!force) {
+      const cached = cache.get(TT_CACHE_KEY);
+      if (cached) return res.json({ cached: true, ...cached });
+    }
+    const grid = await readTab(SPREADSHEET_ID, TEAMTAILOR_TAB);
+    const hi = grid.findIndex((r) => r.some((c) => c && c.trim()));
+    const headers = hi < 0 ? [] : grid[hi].map((c, i) => (c && c.trim() ? c.trim() : 'Column ' + (i + 1)));
+    const rows = [];
+    for (let r = hi + 1; r < grid.length; r++) {
+      const row = grid[r];
+      if (row.every((c) => !c || !c.trim())) continue;
+      rows.push(headers.map((_, i) => (row[i] == null ? '' : String(row[i]).trim())));
+    }
+    const out = { headers, rows };
+    cache.set(TT_CACHE_KEY, out, TTL);
+    res.json({ cached: false, ...out });
+  } catch (err) {
+    console.error('Failed to load Teamtailor data:', err);
+    res.status(502).json({ error: 'teamtailor_failed', message: err.message });
+  }
+});
+
 // Static assets (css/js). Note: index.html is served only via the gated route
 // above, so static files here are the supporting css/js + login page.
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
