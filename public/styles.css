@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
 :root{
   /* Dark theme */
   --ground:#0B0F0D;
@@ -21,7 +22,7 @@
   --s-endorsed:#B48BE8;
   --s-won:#C98BEE;
   --s-neutral:#8A938C;
-  --font-sans:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-sans:"Rubik","Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
   --font-mono:"Cascadia Code","Cascadia Mono","Consolas",ui-monospace,monospace;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.5);
   --shadow-hover:0 2px 6px rgba(0,0,0,.35),0 18px 38px -16px rgba(0,0,0,.6);
@@ -180,7 +181,7 @@ tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:backgro
 tbody tr:last-child{border-bottom:0;}
 tbody tr:hover{background:var(--surface-2);}
 tbody tr:focus-visible{background:var(--accent-soft);outline:none;}
-td{padding:11px 16px;font-size:13.5px;vertical-align:middle;}
+td{padding:11px 16px;font-size:13.5px;vertical-align:middle;white-space:nowrap;}
 td.co{font-weight:600;position:relative;padding-left:20px;}
 td.co .stripe{position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:3px;}
 td.co .cid{display:block;font-size:10.5px;color:var(--faint);font-family:var(--font-mono);font-weight:400;margin-top:1px;}
@@ -193,15 +194,12 @@ td.co .cid{display:block;font-size:10.5px;color:var(--faint);font-family:var(--f
 .empty strong{display:block;color:var(--text);margin-bottom:4px;}
 .tablefoot{padding:11px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:var(--surface-2);}
 
-/* report tables (Peoplebox Subscriptions, Teamtailor): stretch to full width,
-   size columns to their data — short columns shrink to content, text columns
-   absorb the remaining space — with clean top-aligned wrapping. */
+/* report tables (Peoplebox Subscriptions, Teamtailor, Disprz, Hubstaff):
+   size columns to their data on a single line — no word wrapping; the
+   .table-scroll wrapper provides horizontal scroll when needed. */
 #subsPanel table,#ttPanel table,#dzPanel table,#hsPanel table{table-layout:auto;width:100%;min-width:100%;}
-#subsPanel td,#ttPanel td,#dzPanel td,#hsPanel td{white-space:normal;word-break:break-word;vertical-align:top;}
+#subsPanel td,#ttPanel td,#dzPanel td,#hsPanel td{white-space:nowrap;vertical-align:middle;}
 #subsPanel thead th,#ttPanel thead th,#dzPanel thead th,#hsPanel thead th{white-space:nowrap;vertical-align:bottom;}
-/* Peoplebox Subscriptions: keep the short columns compact so the text ones stretch. */
-#subsPanel th:nth-child(3),#subsPanel td:nth-child(3),
-#subsPanel th:nth-child(4),#subsPanel td:nth-child(4){width:1%;white-space:nowrap;}
 
 /* drawer */
 .overlay{position:fixed;inset:0;background:rgba(22,33,28,.36);opacity:0;pointer-events:none;transition:.25s;z-index:40;}
