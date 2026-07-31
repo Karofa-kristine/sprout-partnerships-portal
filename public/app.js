@@ -248,7 +248,7 @@ function openDrawer(c) {
         fieldRow('Closed date', c.closed, true) + fieldRow('Subscription start', c.start, true) + fieldRow('Subscription end', c.end, true) +
         fieldRow('Go-live / Handover', c.go, true) + fieldRow('Years subscribed', c.yrs) +
         fieldRow('Licenses purchased', c.lic == null ? null : String(c.lic), true) + fieldRow('Peoplebox switch', c.sw === '—' ? null : c.sw) +
-        fieldRow('Integration / activation status', c.act === '—' ? null : c.act) +
+        fieldRow('Integration status', c.act === '—' ? null : c.act) +
       '</div>' +
       '<h4>Billing &amp; payments</h4><div class="fields">' +
         fieldRow('Paid to Sprout', c.paidSprout === '—' ? null : c.paidSprout) +
@@ -266,7 +266,7 @@ function closeDrawer() { $('#drawer').classList.remove('on'); $('#drawer').setAt
 /* ---------- CSV ---------- */
 function exportCSV() {
   var rows = filtered();
-  var head = ['Closed Date', 'Company Name', 'CID', 'Account Status', 'Peoplebox Switch Status', 'Integration / Activation Status', 'CSM', 'Subscription Start', 'Subscription End', 'Go-live / Handover', 'Years Subscribed', 'Licenses', 'Current Headcount', 'Paid to Sprout', 'Invoice from Peoplebox', 'Peoplebox Invoice Status'];
+  var head = ['Closed Date', 'Company Name', 'CID', 'Account Status', 'Peoplebox Switch Status', 'Integration Status', 'CSM', 'Subscription Start', 'Subscription End', 'Go-live / Handover', 'Years Subscribed', 'Licenses', 'Current Headcount', 'Paid to Sprout', 'Invoice from Peoplebox', 'Peoplebox Invoice Status'];
   var lines = [head.join(',')];
   rows.forEach(function (c) {
     var hc = lastHC(c.hc);

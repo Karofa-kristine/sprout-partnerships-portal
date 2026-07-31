@@ -80,9 +80,9 @@ function mapColumns(headerRow) {
     subEnd: ['subscription end date', 'hrps subscription end date'],
     // Per-client "switched to Peoplebox?" flag (P+ Switcher: Yes/No).
     switch: ['peoplebox switch status', 'p+ switcher', 'p+ switch'],
-    // Per-client integration/activation status — now published per row (drives
-    // the integration breakdown chart and a drawer field).
-    activation: ['data sync and sso activation status', 'activation status', 'data sync and sso'],
+    // Per-client Integration Status (sheet col N) — drives the integration
+    // breakdown chart, a roster column, and a drawer field.
+    activation: ['integration status'],
     upsell: ['upsell comments', 'notes'],
     licenses: ['# of licenses initially purchased', '# of  licenses initially purchased'],
     // Billing status (operational flags — not pricing/ARR, which stay excluded).
@@ -184,8 +184,11 @@ function buildKpis(status, integration) {
   const active = find(status, /^active$/);
   const ongoing = find(status, /ongoing.*implementation/);
   const activated = find(integration, /^activated$/);
-  const pending =
-    find(integration, /pending with peoplebox/) + find(integration, /pending.*transition/);
+  // Any Integration Status that starts with "Pending" (plain Pending,
+  // "Pending with Peoplebox", "Pending (Transition to Sprout)").
+  const pending = integration
+    .filter((x) => /^pending/.test(norm(x.name)))
+    .reduce((sum, x) => sum + x.count, 0);
   const activeTotal = active || 0;
   return [
     { val: active, name: 'Active clients', meta: 'Live Peoplebox subscriptions', tone: 'active' },
