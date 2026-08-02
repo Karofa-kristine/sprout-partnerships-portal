@@ -54,7 +54,7 @@ function parseDate(s) { var t = Date.parse(s); return isNaN(t) ? 0 : t; }
 var DATA = null;     // full API payload
 var WIN = 12;        // trailing months window
 var MONTHS = [];     // sliced month labels
-var state = { q: '', status: '', sw: '', paid: '', csm: '' };
+var state = { q: '', status: '', sw: '', paid: '', pboxInv: '', csm: '' };
 var sort = { key: 'co', dir: 1 };
 
 /* take the trailing-window slice of a client's hc array */
@@ -152,6 +152,7 @@ function populateFilters() {
   var cs = DATA.clients;
   uniq(cs.map(function (c) { return c.acct; })).sort().forEach(function (v) { var o = el('option', null, v); o.value = v; $('#fStatus').appendChild(o); });
   uniq(cs.map(function (c) { return c.paidSprout; }).filter(function (v) { return v && v !== '—'; })).sort().forEach(function (v) { var o = el('option', null, v); o.value = v; $('#fPaid').appendChild(o); });
+  uniq(cs.map(function (c) { return c.pboxInvoice; }).filter(function (v) { return v && v !== '—'; })).sort().forEach(function (v) { var o = el('option', null, v); o.value = v; $('#fPboxInv').appendChild(o); });
   uniq(cs.map(function (c) { return c.csm; })).sort().forEach(function (v) { var o = el('option', null, v); o.value = v; $('#fCsm').appendChild(o); });
 }
 function filtered() {
@@ -159,6 +160,7 @@ function filtered() {
     if (state.q && c.co.toLowerCase().indexOf(state.q.toLowerCase()) < 0) return false;
     if (state.status && c.acct !== state.status) return false;
     if (state.paid && c.paidSprout !== state.paid) return false;
+    if (state.pboxInv && c.pboxInvoice !== state.pboxInv) return false;
     if (state.csm && c.csm !== state.csm) return false;
     return true;
   });
@@ -183,6 +185,7 @@ function renderChips() {
   if (state.q) add('Search: “' + state.q + '”', 'q');
   if (state.status) add('Account: ' + state.status, 'status');
   if (state.paid) add('Paid to Sprout: ' + state.paid, 'paid');
+  if (state.pboxInv) add('Pbox invoice: ' + state.pboxInv, 'pboxInv');
   if (state.csm) add('CSM: ' + state.csm, 'csm');
 }
 function renderSortIndicators() {
@@ -221,7 +224,7 @@ function render() {
   $('#tablefoot').textContent = 'Showing ' + rows.length + ' of ' + DATA.clients.length + ' client records.';
   $('#rosterNote').textContent = DATA.clients.length + ' records · live from source sheet';
 }
-function syncControls() { $('#search').value = state.q; $('#fStatus').value = state.status; $('#fPaid').value = state.paid; $('#fCsm').value = state.csm; }
+function syncControls() { $('#search').value = state.q; $('#fStatus').value = state.status; $('#fPaid').value = state.paid; $('#fPboxInv').value = state.pboxInv; $('#fCsm').value = state.csm; }
 
 /* ---------- drawer ---------- */
 function fieldRow(k, v, mono) { return "<div class='field'><div class='k'>" + esc(k) + "</div><div class='v" + (mono ? ' mono' : '') + "'>" + (v == null || v === '' ? "<span style='color:var(--faint);font-weight:400'>—</span>" : esc(v)) + '</div></div>'; }
@@ -340,8 +343,9 @@ setInterval(function () { if (DATA) load(false, true); }, 60000);
 $('#search').addEventListener('input', function (e) { state.q = e.target.value; render(); });
 $('#fStatus').addEventListener('change', function (e) { state.status = e.target.value; render(); });
 $('#fPaid').addEventListener('change', function (e) { state.paid = e.target.value; render(); });
+$('#fPboxInv').addEventListener('change', function (e) { state.pboxInv = e.target.value; render(); });
 $('#fCsm').addEventListener('change', function (e) { state.csm = e.target.value; render(); });
-$('#clearBtn').addEventListener('click', function () { state = { q: '', status: '', sw: '', paid: '', csm: '' }; syncControls(); render(); });
+$('#clearBtn').addEventListener('click', function () { state = { q: '', status: '', sw: '', paid: '', pboxInv: '', csm: '' }; syncControls(); render(); });
 $('#exportBtn').addEventListener('click', exportCSV);
 $('#overlay').addEventListener('click', closeDrawer);
 $('#refreshBtn').addEventListener('click', function () { load(true); });
