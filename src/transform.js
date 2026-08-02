@@ -207,13 +207,20 @@ function buildKpis(status, integration) {
  * @param {string[][]} grid  raw values from the Peoplebox tab
  * @param {{spreadsheetId:string, tab:string}} source
  */
+function lastHc(hc) {
+  for (let i = hc.length - 1; i >= 0; i--) if (hc[i] != null) return hc[i];
+  return null;
+}
 function buildBilling(clients) {
   const total = clients.length;
   const paidToSprout = clients.filter((c) => /^paid$/i.test(c.paidSprout)).length;
   const pendingToSprout = clients.filter((c) => /^pending$/i.test(c.paidSprout)).length;
   const invoicedByPbox = clients.filter((c) => c.pboxInvoiced === 'Yes').length;
   const pboxInvoicePaid = clients.filter((c) => /^paid$/i.test(c.pboxInvoice)).length;
-  return { total, paidToSprout, pendingToSprout, invoicedByPbox, pboxInvoicePaid };
+  const pboxPaidHeadcount = clients
+    .filter((c) => /^paid$/i.test(c.pboxInvoice))
+    .reduce((sum, c) => sum + (lastHc(c.hc) || 0), 0);
+  return { total, paidToSprout, pendingToSprout, invoicedByPbox, pboxInvoicePaid, pboxPaidHeadcount };
 }
 
 function transform(grid, source) {

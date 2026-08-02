@@ -129,6 +129,7 @@ function renderBilling() {
     { val: b.pendingToSprout, color: 'var(--s-onhold)', icon: 'pending', name: 'Not yet paid to Sprout', meta: pct(b.pendingToSprout, b.total) + ' of clients · payment pending' },
     { val: b.invoicedByPbox, color: 'var(--indigo)', icon: 'invoice', name: 'Invoiced by Peoplebox', meta: 'have a Peoplebox invoice issued' },
     { val: b.pboxInvoicePaid, color: 'var(--s-ongoing)', icon: 'settled', name: 'Peoplebox invoice settled', meta: 'Peoplebox invoices marked paid' },
+    { val: (b.pboxPaidHeadcount || 0).toLocaleString(), color: 'var(--brand)', icon: 'clients', name: 'Headcount on paid Pbox invoices', meta: 'total headcount across settled Peoplebox invoices' },
   ];
   cards.forEach(function (k) { c.insertAdjacentHTML('beforeend', kpiCard(k)); });
   $('#billingNote').textContent = b.total + ' clients · billing status from source sheet';
