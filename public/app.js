@@ -125,7 +125,7 @@ function pct(n, d) { return d ? Math.round((n / d) * 100) + '%' : '0%'; }
 function renderBilling() {
   var b = DATA.billing, c = $('#billing'); if (!b || !c) return; c.innerHTML = '';
   var cards = [
-    { val: b.paidToSprout, color: 'var(--s-active)', icon: 'active', name: 'Paid to Sprout', meta: 'of ' + b.total + ' clients · ' + pct(b.paidToSprout, b.total) + ' settled' },
+    { val: b.paidToSprout, color: 'var(--s-active)', icon: 'active', name: 'Paid Clients to Sprout', meta: 'of ' + b.total + ' clients · ' + pct(b.paidToSprout, b.total) + ' settled' },
     { val: b.pendingToSprout, color: 'var(--s-onhold)', icon: 'pending', name: 'Not yet paid to Sprout', meta: pct(b.pendingToSprout, b.total) + ' of clients · payment pending' },
     { val: b.invoicedByPbox, color: 'var(--indigo)', icon: 'invoice', name: 'Invoiced by Peoplebox', meta: 'have a Peoplebox invoice issued' },
     { val: b.pboxInvoicePaid, color: 'var(--s-ongoing)', icon: 'settled', name: 'Peoplebox invoice settled', meta: 'Peoplebox invoices marked paid' },
@@ -184,7 +184,7 @@ function renderChips() {
   }
   if (state.q) add('Search: “' + state.q + '”', 'q');
   if (state.status) add('Account: ' + state.status, 'status');
-  if (state.paid) add('Paid to Sprout: ' + state.paid, 'paid');
+  if (state.paid) add('Paid Clients to Sprout: ' + state.paid, 'paid');
   if (state.pboxInv) add('Pbox invoice: ' + state.pboxInv, 'pboxInv');
   if (state.csm) add('CSM: ' + state.csm, 'csm');
 }
@@ -254,7 +254,7 @@ function openDrawer(c) {
         fieldRow('Integration status', c.act === '—' ? null : c.act) +
       '</div>' +
       '<h4>Billing &amp; payments</h4><div class="fields">' +
-        fieldRow('Paid to Sprout', c.paidSprout === '—' ? null : c.paidSprout) +
+        fieldRow('Paid Clients to Sprout', c.paidSprout === '—' ? null : c.paidSprout) +
         fieldRow('Invoice from Peoplebox', c.pboxInvoiced === '—' ? null : c.pboxInvoiced) +
         fieldRow('Peoplebox invoice status', c.pboxInvoice === '—' ? null : c.pboxInvoice) +
       '</div>' +
@@ -269,7 +269,7 @@ function closeDrawer() { $('#drawer').classList.remove('on'); $('#drawer').setAt
 /* ---------- CSV ---------- */
 function exportCSV() {
   var rows = filtered();
-  var head = ['Closed Date', 'Company Name', 'CID', 'Account Status', 'Peoplebox Switch Status', 'Integration Status', 'CSM', 'Subscription Start', 'Subscription End', 'Go-live / Handover', 'Years Subscribed', 'Licenses', 'Current Headcount', 'Paid to Sprout', 'Invoice from Peoplebox', 'Peoplebox Invoice Status'];
+  var head = ['Closed Date', 'Company Name', 'CID', 'Account Status', 'Peoplebox Switch Status', 'Integration Status', 'CSM', 'Subscription Start', 'Subscription End', 'Go-live / Handover', 'Years Subscribed', 'Licenses', 'Current Headcount', 'Paid Clients to Sprout', 'Invoice from Peoplebox', 'Peoplebox Invoice Status'];
   var lines = [head.join(',')];
   rows.forEach(function (c) {
     var hc = lastHC(c.hc);
