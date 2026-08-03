@@ -314,6 +314,16 @@
         bar.appendChild(clr);
       }
 
+      // For Paynamics, drop the "HR and Payroll" wording from the recurring
+      // subscription remarks and tidy up any leftover separators/spacing.
+      function subDesc(r){
+        var v = String(r.recurring_sub||'');
+        if(/paynamics/i.test(String(r.client||''))){
+          v = v.replace(/HR\s*(?:and|&)\s*Payroll/ig, '');
+          v = v.replace(/\s{2,}/g,' ').replace(/^[\s\-–—|,]+|[\s\-–—|,]+$/g,'').trim();
+        }
+        return v || '—';
+      }
       function renderSubs(){
         var q = (document.getElementById('subsSearch').value || '').toLowerCase();
         var rows = subsData.filter(function(r){
@@ -331,7 +341,7 @@
               "<td>" + esc(r.item_display||'—') + "</td>" +
               "<td class='num' style='font-size:12.5px'>" + esc(r.invoice_ref||'—') + "</td>" +
               "<td><span style='font-weight:600;color:" + stColor(r.invoice_status) + "'>" + esc(r.invoice_status||'—') + "</span></td>" +
-              "<td>" + esc(r.recurring_sub||'—') + "</td></tr>";
+              "<td>" + esc(subDesc(r)) + "</td></tr>";
           }).join('');
         }
         document.getElementById('subsFoot').textContent = 'Showing ' + rows.length + ' of ' + subsData.length + ' subscription line items.';
