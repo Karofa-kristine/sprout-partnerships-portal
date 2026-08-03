@@ -185,7 +185,7 @@ function renderChips() {
   }
   if (state.q) add('Search: “' + state.q + '”', 'q');
   if (state.status) add('Account: ' + state.status, 'status');
-  if (state.paid) add('Paid Clients to Sprout: ' + state.paid, 'paid');
+  if (state.paid) add('Client Invoice Status: ' + state.paid, 'paid');
   if (state.pboxInv) add('Pbox invoice: ' + state.pboxInv, 'pboxInv');
   if (state.csm) add('CSM: ' + state.csm, 'csm');
 }
