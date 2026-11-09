@@ -182,8 +182,8 @@ function tally(values) {
 function buildKpis(status, clients) {
   const find = (arr, re) => (arr.find((x) => re.test(norm(x.name))) || {}).count || 0;
   const active = find(status, /^active$/);
-  // Clients currently tagged "Ongoing CRF" (CRF form in progress), any status.
-  const ongoingCrf = clients.filter((c) => /crf/i.test(c.act)).length;
+  // Active clients currently tagged "Ongoing CRF" (CRF form in progress).
+  const ongoingCrf = clients.filter((c) => /^active$/i.test(c.acct) && /crf/i.test(c.act)).length;
 
   // Integration figures reflect current integration + CRF status and cover only
   // clients already live / done implementing (Client Status = Active). Clients
