@@ -189,8 +189,17 @@
       function productOf(tab){ return tab === 'subs' ? 'peoplebox' : tab; }
       function canAccess(tab){ if(tab === 'overview') return true; return !!ACCESS && ACCESS.indexOf(productOf(tab)) >= 0; }
 
+      function noAccessToast(){
+        var t = document.getElementById('naToast');
+        if(!t){ t = document.createElement('div'); t.id = 'naToast';
+          t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .2s;box-shadow:0 6px 20px rgba(0,0,0,.25)';
+          document.body.appendChild(t); }
+        t.textContent = '🔒 You don’t have access to this product. Contact Sprout Partnerships.';
+        t.style.opacity = '1';
+        clearTimeout(t._h); t._h = setTimeout(function(){ t.style.opacity = '0'; }, 2800);
+      }
       function activateTab(tab){
-        if(!canAccess(tab)) return;
+        if(!canAccess(tab)){ noAccessToast(); return; }
         document.querySelectorAll('.tabpanel').forEach(function(p){
           p.classList.toggle('hide', p.dataset.tab !== tab);
         });
@@ -222,16 +231,21 @@
           ACCESS = (a && a.products) || [];
           IS_INTERNAL = !!(a && a.internal);
           if(!IS_INTERNAL) hideExports();
-          var shown = 0;
+          // Everyone sees every product tile; tiles the account can't open are
+          // shown locked (and blocked from opening — the server also 403s the data).
           document.querySelectorAll('.ptile').forEach(function(t){
             var ok = ACCESS.indexOf(productOf(t.dataset.goto)) >= 0;
-            t.style.display = ok ? '' : 'none';
-            if(ok) shown++;
+            t.classList.toggle('locked', !ok);
+            var badge = t.querySelector('.lockbadge');
+            if(ok){ t.style.opacity = ''; t.style.cursor = ''; if(badge) badge.remove(); }
+            else {
+              t.style.opacity = '0.55'; t.style.cursor = 'not-allowed'; t.style.position = 'relative';
+              if(!badge){ badge = document.createElement('span'); badge.className = 'lockbadge';
+                badge.textContent = '🔒 No access';
+                badge.style.cssText = 'position:absolute;top:10px;right:10px;font-size:11px;font-weight:600;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:2px 9px';
+                t.appendChild(badge); }
+            }
           });
-          if(!shown){
-            var grid = document.getElementById('ptiles');
-            if(grid) grid.innerHTML = "<div class='empty' style='padding:30px;color:var(--muted)'>Your account doesn't have access to any partner product yet. Contact Sprout Partnerships.</div>";
-          }
         });
 
       // ---- Peoplebox Subscriptions (RADAR) ----
