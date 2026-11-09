@@ -201,6 +201,7 @@ function filtered() {
     var x, y;
     if (sort.key === 'hc') { x = a.lic == null ? -1 : a.lic; y = b.lic == null ? -1 : b.lic; }
     else if (sort.key === 'hclast') { x = lastHC(a.hc); x = x == null ? -1 : x; y = lastHC(b.hc); y = y == null ? -1 : y; }
+    else if (sort.key.indexOf('mon:') === 0) { var mi = parseInt(sort.key.slice(4), 10), aw = hcWindow(a.hc), bw = hcWindow(b.hc); x = aw[mi] == null ? -1 : aw[mi]; y = bw[mi] == null ? -1 : bw[mi]; }
     else if (sort.key === 'closed') { x = parseDate(a.closed); y = parseDate(b.closed); }
     else if (sort.key === 'start') { x = parseDate(a.start); y = parseDate(b.start); }
     else if (sort.key === 'end') { x = parseDate(a.end); y = parseDate(b.end); }
@@ -223,6 +224,23 @@ function renderChips() {
   if (state.pboxInv) add('Pbox invoice: ' + state.pboxInv, 'pboxInv');
   if (state.csm) add('CSM: ' + state.csm, 'csm');
 }
+// Inject one sortable roster column per month (Jan 2026 → current), mirroring
+// the headcount columns in the Google Sheet. Rebuilt each render so it tracks
+// new months automatically.
+function buildMonthHeaders() {
+  var row = document.querySelector('#app thead tr'); if (!row) return;
+  Array.prototype.slice.call(row.querySelectorAll('th.month-col')).forEach(function (th) { th.remove(); });
+  var anchor = row.querySelector("th[data-sort='hc']"); // after "Initial Headcount"
+  MONTHS.forEach(function (label, i) {
+    var th = document.createElement('th');
+    th.className = 'r sortable month-col';
+    th.setAttribute('data-sort', 'mon:' + i);
+    th.style.whiteSpace = 'nowrap';
+    th.innerHTML = esc(shortMonth(label)) + "<span class='arrow'></span>";
+    th.onclick = function () { var k = 'mon:' + i; if (sort.key === k) sort.dir *= -1; else { sort.key = k; sort.dir = -1; } render(); };
+    if (anchor && anchor.parentNode) { anchor.parentNode.insertBefore(th, anchor.nextSibling); anchor = th; }
+  });
+}
 function renderSortIndicators() {
   document.querySelectorAll('thead th.sortable').forEach(function (th) {
     var key = th.getAttribute('data-sort'), arrow = th.querySelector('.arrow');
@@ -231,10 +249,10 @@ function renderSortIndicators() {
   });
 }
 function render() {
-  renderChips(); renderSortIndicators();
+  renderChips(); buildMonthHeaders(); renderSortIndicators();
   var rows = filtered(), tb = $('#tbody'); tb.innerHTML = '';
   if (!rows.length) {
-    tb.appendChild(el('tr', null, "<td colspan='12'><div class='empty'><strong>No clients match these filters.</strong>Try clearing a filter or searching a different name.</div></td>"));
+    tb.appendChild(el('tr', null, "<td colspan='" + (11 + MONTHS.length) + "'><div class='empty'><strong>No clients match these filters.</strong>Try clearing a filter or searching a different name.</div></td>"));
   } else {
     rows.forEach(function (c) {
       var tr = el('tr'); tr.tabIndex = 0;
@@ -251,7 +269,7 @@ function render() {
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.start || '—') + '</td>' +
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.end || '—') + '</td>' +
         "<td class='r hc num'>" + (c.lic == null ? '—' : c.lic) + '</td>' +
-        "<td class='r'>" + hcTrendCell(c) + '</td>';
+        hcWindow(c.hc).map(function (v) { return "<td class='r num' style='font-size:12px;color:var(--muted)'>" + (v == null ? '—' : v) + '</td>'; }).join('');
       tr.onclick = function () { openDrawer(c); };
       tr.onkeydown = function (e) { if (e.key === 'Enter') openDrawer(c); };
       tb.appendChild(tr);
@@ -306,12 +324,12 @@ function closeDrawer() { $('#drawer').classList.remove('on'); $('#drawer').setAt
 /* ---------- CSV ---------- */
 function exportCSV() {
   var rows = filtered();
-  var head = ['Closed Date', 'Company Name', 'CID', 'Account Status', 'Peoplebox Switch Status', 'Integration Status', 'CSM', 'Subscription Start', 'Subscription End', 'Go-live / Handover', 'Years Subscribed', 'Licenses', 'Current Headcount', 'Paid Clients to Sprout', 'Invoice from Peoplebox', 'Peoplebox Invoice Status'];
+  var head = ['Closed Date', 'Company Name', 'CID', 'Account Status', 'Peoplebox Switch Status', 'Integration Status', 'CSM', 'Subscription Start', 'Subscription End', 'Go-live / Handover', 'Years Subscribed', 'Licenses', 'Current Headcount', 'Paid Clients to Sprout', 'Invoice from Peoplebox', 'Peoplebox Invoice Status'].concat(MONTHS);
   var lines = [head.join(',')];
   rows.forEach(function (c) {
     var hc = lastHC(c.hc);
     var clean = function (v) { return v === '—' ? '' : v; };
-    var vals = [c.closed, c.co, c.cid, c.acct, clean(c.sw), clean(c.act), c.csm === 'Unassigned' ? '' : c.csm, c.start, c.end, c.go, c.yrs === '—' ? '' : c.yrs, c.lic == null ? '' : c.lic, hc == null ? '' : hc, clean(c.paidSprout), clean(c.pboxInvoiced), clean(c.pboxInvoice)];
+    var vals = [c.closed, c.co, c.cid, c.acct, clean(c.sw), clean(c.act), c.csm === 'Unassigned' ? '' : c.csm, c.start, c.end, c.go, c.yrs === '—' ? '' : c.yrs, c.lic == null ? '' : c.lic, hc == null ? '' : hc, clean(c.paidSprout), clean(c.pboxInvoiced), clean(c.pboxInvoice)].concat(hcWindow(c.hc).map(function (v) { return v == null ? '' : v; }));
     lines.push(vals.map(function (v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','));
   });
   var blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
