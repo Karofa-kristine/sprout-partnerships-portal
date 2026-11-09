@@ -124,6 +124,35 @@ const RAW_TABS = {
   hubstaff: process.env.HUBSTAFF_TAB || 'Hubstaff',
 };
 
+// ── Full per-product report (same shape as /api/data) ────
+// For any product tab that follows the Peoplebox schema (Company Name +
+// Client Status + Integration Status + subscription dates …). Powers the
+// Teamtailor/Disprz/Hubstaff dashboards, which reuse the Peoplebox renderer.
+const REPORT_TABS = Object.assign({ peoplebox: TAB }, RAW_TABS);
+app.get('/api/report/:product', auth.requireAuth, async (req, res) => {
+  const product = req.params.product;
+  const tab = REPORT_TABS[product];
+  if (!tab) return res.status(404).json({ error: 'unknown_product' });
+  if (allowedProducts(req).indexOf(product) < 0) {
+    return res.status(403).json({ error: 'forbidden', message: 'Your account does not have access to this product.' });
+  }
+  try {
+    const force = req.query.refresh === '1';
+    const cacheKey = 'report-' + product;
+    if (!force) {
+      const cached = cache.get(cacheKey);
+      if (cached) return res.json({ ...cached, cached: true });
+    }
+    const grid = await readTab(SPREADSHEET_ID, tab);
+    const data = transform(grid, { spreadsheetId: SPREADSHEET_ID, tab });
+    cache.set(cacheKey, data, TTL);
+    res.json({ ...data, cached: false });
+  } catch (err) {
+    console.error('Failed to build report for', product, err);
+    res.status(502).json({ error: 'report_failed', message: err.message });
+  }
+});
+
 app.get('/api/rawtab/:key', auth.requireAuth, async (req, res) => {
   const key = req.params.key;
   const tab = RAW_TABS[key];

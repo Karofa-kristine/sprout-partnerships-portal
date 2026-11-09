@@ -161,77 +161,9 @@
     </div>
   </div>
 
-  <div class="wrap tabpanel hide" id="ttPanel" data-tab="teamtailor">
-    <div class="section-head"><h2>Teamtailor</h2><span class="note" id="ttNote">live from the Teamtailor tab of the source sheet</span></div>
-    <div class="toolbar">
-      <div class="search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="ttSearch" type="text" placeholder="Search…" autocomplete="off"/>
-      </div>
-      <button class="btn" id="ttExport">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-        Export CSV
-      </button>
-      <button class="btn" id="ttRefresh">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-        Refresh
-      </button>
-    </div>
-    <div class="table-wrap">
-      <div class="table-scroll">
-        <table><thead id="ttHead"></thead><tbody id="ttBody"><tr><td><div class="empty">Open this tab to load Teamtailor data.</div></td></tr></tbody></table>
-      </div>
-      <div class="tablefoot" id="ttFoot"></div>
-    </div>
-  </div>
-
-  <div class="wrap tabpanel hide" id="dzPanel" data-tab="disprz">
-    <div class="section-head"><h2>Disprz</h2><span class="note" id="dzNote">live from the Disprz tab of the source sheet</span></div>
-    <div class="toolbar">
-      <div class="search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="dzSearch" type="text" placeholder="Search…" autocomplete="off"/>
-      </div>
-      <button class="btn" id="dzExport">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-        Export CSV
-      </button>
-      <button class="btn" id="dzRefresh">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-        Refresh
-      </button>
-    </div>
-    <div class="table-wrap">
-      <div class="table-scroll">
-        <table><thead id="dzHead"></thead><tbody id="dzBody"><tr><td><div class="empty">Open this tab to load Disprz data.</div></td></tr></tbody></table>
-      </div>
-      <div class="tablefoot" id="dzFoot"></div>
-    </div>
-  </div>
-
-  <div class="wrap tabpanel hide" id="hsPanel" data-tab="hubstaff">
-    <div class="section-head"><h2>Hubstaff</h2><span class="note" id="hsNote">live from the Hubstaff tab of the source sheet</span></div>
-    <div class="toolbar">
-      <div class="search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="hsSearch" type="text" placeholder="Search…" autocomplete="off"/>
-      </div>
-      <button class="btn" id="hsExport">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-        Export CSV
-      </button>
-      <button class="btn" id="hsRefresh">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-        Refresh
-      </button>
-    </div>
-    <div class="table-wrap">
-      <div class="table-scroll">
-        <table><thead id="hsHead"></thead><tbody id="hsBody"><tr><td><div class="empty">Open this tab to load Hubstaff data.</div></td></tr></tbody></table>
-      </div>
-      <div class="tablefoot" id="hsFoot"></div>
-    </div>
-  </div>
+  <div class="wrap tabpanel hide" id="teamtailorPanel" data-tab="teamtailor"></div>
+  <div class="wrap tabpanel hide" id="disprzPanel" data-tab="disprz"></div>
+  <div class="wrap tabpanel hide" id="hubstaffPanel" data-tab="hubstaff"></div>
 
   <footer id="footer"></footer>
   </div><!-- /content -->
@@ -380,85 +312,152 @@
       document.getElementById('subsSearch').addEventListener('input', renderSubs);
       document.getElementById('subsRefresh').addEventListener('click', function(){ loadSubs(true); });
 
-      // ---- Generic raw sheet-tab reports (Teamtailor, Disprz, Hubstaff) ----
-      function makeRawReport(key, prefix, filename){
-        var loaded = false, data = { headers: [], rows: [] }, filters = {};
-        var byId = function(suf){ return document.getElementById(prefix + suf); };
-        // Auto-build a dropdown filter for each column with a manageable number
-        // of distinct values (free-text search covers the high-cardinality ones).
-        function buildFilters(){
-          var panel = document.getElementById(prefix + 'Panel');
-          var bar = document.getElementById(prefix + 'Filters');
-          if(!bar){ bar = document.createElement('div'); bar.className = 'filterbar'; bar.id = prefix + 'Filters'; panel.insertBefore(bar, panel.querySelector('.table-wrap')); }
-          bar.innerHTML = ''; filters = {};
-          data.headers.forEach(function(h, ci){
-            var seen = {}, order = [];
-            data.rows.forEach(function(r){ var v = (r[ci] == null ? '' : String(r[ci]).trim()); if(v && !seen[v]){ seen[v] = 1; order.push(v); } });
-            if(order.length < 2 || order.length > 25) return;
-            order.sort();
-            var sel = document.createElement('select'); sel.className = 'flt';
-            sel.innerHTML = '<option value="">All ' + esc(h) + '</option>' + order.map(function(v){ return '<option>' + esc(v) + '</option>'; }).join('');
-            sel.addEventListener('change', function(){ if(sel.value) filters[ci] = sel.value; else delete filters[ci]; render(); });
-            bar.appendChild(sel);
-          });
-          if(bar.children.length){
-            var clr = document.createElement('button'); clr.className = 'btn'; clr.textContent = 'Clear';
-            clr.addEventListener('click', function(){ filters = {}; bar.querySelectorAll('select').forEach(function(s){ s.value = ''; }); render(); });
-            bar.appendChild(clr);
-          }
+      // ---- Full product reports (Teamtailor, Disprz, Hubstaff) ----
+      // Same dashboard as the Peoplebox tab (KPI cards + Client-status donut +
+      // sortable client roster), driven by /api/report/:product (server-side
+      // transform). Billing is Peoplebox-only (those tabs have no billing
+      // columns); the headcount column appears only when the tab carries it.
+      // Reuses app.js globals: kpiCard, statusColor, KPI_TONE, TONE_ICON.
+      function makeProductReport(key, title){
+        var loaded = false, built = false, filtersFilled = false, DATA = null;
+        var st = { q:'', status:'', integ:'', csm:'' }, srt = { key:'co', dir:1 };
+        var panel = document.getElementById(key + 'Panel');
+        var pd = function(s){ var t = Date.parse(s); return isNaN(t) ? 0 : t; };
+        var uniq = function(a){ var o={}, r=[]; a.forEach(function(v){ if(v && !o[v]){ o[v]=1; r.push(v); } }); return r; };
+
+        function cols(){
+          var c = [
+            { key:'co', label:'Company', type:'text' },
+            { key:'acct', label:'Account', type:'text' },
+            { key:'act', label:'Integration Status', type:'text' },
+            { key:'csm', label:'CSM', type:'text' },
+            { key:'start', label:'Sub. start', type:'date' },
+            { key:'end', label:'Sub. end', type:'date' },
+          ];
+          if(DATA && DATA.clients.some(function(x){ return x.lic != null; })) c.push({ key:'lic', label:'Initial Headcount', type:'num' });
+          return c;
         }
-        function render(){
-          var q = (byId('Search').value || '').toLowerCase();
-          var rows = data.rows.filter(function(r){
-            for(var ci in filters){ if(String(r[ci] == null ? '' : r[ci]).trim() !== filters[ci]) return false; }
-            return !q || r.some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; });
+        function cell(cl, col){
+          if(col.key === 'co') return "<td class='co'>" + esc(cl.co) + "</td>";
+          if(col.key === 'acct'){ var isA = cl.acct === 'Active'; return "<td><span class='pill' style='background:" + (isA?'var(--accent-soft)':'#F0EFEF') + ";color:" + (isA?'var(--accent)':'var(--s-neutral)') + "'><span class='d' style='background:" + (isA?'var(--accent)':'var(--s-neutral)') + "'></span>" + esc(cl.acct) + "</span></td>"; }
+          if(col.key === 'csm') return "<td>" + (cl.csm === 'Unassigned' ? "<span style='color:var(--faint)'>Unassigned</span>" : esc(cl.csm)) + "</td>";
+          if(col.key === 'lic') return "<td class='r num'>" + (cl.lic == null ? '—' : cl.lic) + "</td>";
+          if(col.type === 'date') return "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(cl[col.key] || '—') + "</td>";
+          return "<td>" + esc(cl[col.key] || '—') + "</td>";
+        }
+        function sval(cl, col){
+          if(col.type === 'date') return pd(cl[col.key]);
+          if(col.type === 'num') return cl[col.key] == null ? -1 : cl[col.key];
+          var v = cl[col.key]; return (v == null || v === '—') ? '' : String(v).toLowerCase();
+        }
+        function filtered(){
+          var rows = DATA.clients.filter(function(c){
+            if(st.q && c.co.toLowerCase().indexOf(st.q.toLowerCase()) < 0) return false;
+            if(st.status && c.acct !== st.status) return false;
+            if(st.integ && c.act !== st.integ) return false;
+            if(st.csm && c.csm !== st.csm) return false;
+            return true;
           });
-          byId('Head').innerHTML = '<tr>' + data.headers.map(function(h){ return '<th>' + esc(h) + '</th>'; }).join('') + '</tr>';
-          var tb = byId('Body');
-          if(!rows.length){
-            tb.innerHTML = "<tr><td colspan='" + Math.max(1, data.headers.length) + "'><div class='empty'><strong>No matching rows.</strong></div></td></tr>";
-          } else {
-            tb.innerHTML = rows.map(function(r){
-              return '<tr>' + data.headers.map(function(_, i){ return '<td>' + esc(r[i] != null && r[i] !== '' ? r[i] : '—') + '</td>'; }).join('') + '</tr>';
-            }).join('');
-          }
-          byId('Foot').textContent = 'Showing ' + rows.length + ' of ' + data.rows.length + ' rows · ' + data.headers.length + ' columns.';
+          var col = cols().filter(function(x){ return x.key === srt.key; })[0] || cols()[0];
+          rows.sort(function(a,b){ var x = sval(a,col), y = sval(b,col); return x < y ? -srt.dir : x > y ? srt.dir : 0; });
+          return rows;
+        }
+        function renderKpis(){
+          var box = document.getElementById(key + 'Kpis'); box.innerHTML = '';
+          DATA.kpis.forEach(function(k, i){
+            box.insertAdjacentHTML('beforeend', kpiCard({ val:k.val, name:k.name, meta:k.meta, color:KPI_TONE[k.tone] || 'var(--accent)', icon:TONE_ICON[k.tone] || 'clients', hero:i === 0 }));
+          });
+        }
+        function renderDonut(){
+          var b = DATA.statusBreakdown, total = b.reduce(function(a,x){ return a + x.count; }, 0), acc = 0, stops = [];
+          b.forEach(function(s){ var from = acc/total*360, to = (acc+s.count)/total*360; stops.push(statusColor(s.name) + ' ' + from.toFixed(2) + 'deg ' + to.toFixed(2) + 'deg'); acc += s.count; });
+          document.getElementById(key + 'Donut').style.background = total ? 'conic-gradient(' + stops.join(',') + ')' : 'var(--surface-2)';
+          document.getElementById(key + 'DonutTotal').textContent = total;
+          document.getElementById(key + 'StatusTotal').textContent = total + ' total';
+          var lg = document.getElementById(key + 'Legend'); lg.innerHTML = '';
+          b.forEach(function(s){ var row = document.createElement('div'); row.className = 'row'; row.innerHTML = "<span class='dot' style='background:" + statusColor(s.name) + "'></span><span class='nm'>" + esc(s.name) + "</span><span class='ct num'>" + s.count + "</span>"; lg.appendChild(row); });
+        }
+        function renderRoster(){
+          var cs = cols();
+          var head = document.getElementById(key + 'Head');
+          head.innerHTML = '<tr>' + cs.map(function(col){
+            var isR = col.key === 'lic', arrow = srt.key === col.key ? (srt.dir > 0 ? ' ▲' : ' ▼') : '';
+            return "<th class='rsort" + (isR?' r':'') + "' data-k='" + col.key + "' style='cursor:pointer;white-space:nowrap'>" + esc(col.label) + "<span class='arrow'>" + arrow + "</span></th>";
+          }).join('') + '</tr>';
+          head.querySelectorAll('th.rsort').forEach(function(th){
+            th.onclick = function(){ var k = th.getAttribute('data-k'); if(srt.key === k) srt.dir *= -1; else { srt.key = k; srt.dir = (k === 'lic' ? -1 : 1); } renderRoster(); };
+          });
+          var rows = filtered(), tb = document.getElementById(key + 'Body');
+          if(!rows.length){ tb.innerHTML = "<tr><td colspan='" + cs.length + "'><div class='empty'><strong>No clients match these filters.</strong></div></td></tr>"; }
+          else { tb.innerHTML = rows.map(function(c){ return '<tr>' + cs.map(function(col){ return cell(c, col); }).join('') + '</tr>'; }).join(''); }
+          document.getElementById(key + 'Foot').textContent = 'Showing ' + rows.length + ' of ' + DATA.clients.length + ' client records.';
+        }
+        function populateFilters(){
+          var cs = DATA.clients;
+          function fill(id, vals){ var sel = document.getElementById(id); uniq(vals).sort().forEach(function(v){ var o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); }); }
+          fill(key + 'FStatus', cs.map(function(c){ return c.acct; }));
+          fill(key + 'FInteg', cs.map(function(c){ return c.act; }).filter(function(v){ return v && v !== '—'; }));
+          fill(key + 'FCsm', cs.map(function(c){ return c.csm; }));
+        }
+        function exportCSV(){
+          var cs = cols(), head = cs.map(function(c){ return c.label; }), lines = [head.join(',')];
+          filtered().forEach(function(c){
+            var vals = cs.map(function(col){ var v = c[col.key]; return (v == null || v === '—') ? '' : v; });
+            lines.push(vals.map(function(v){ v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; }).join(','));
+          });
+          var blob = new Blob([lines.join('\r\n')], { type:'text/csv;charset=utf-8;' });
+          var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = key + '-clients.csv';
+          document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+        }
+        function shell(){
+          panel.innerHTML =
+            "<div class='section-head'><h2>" + esc(title) + "</h2><span class='note' id='" + key + "Note'></span></div>" +
+            "<div class='kpis' id='" + key + "Kpis'></div>" +
+            "<p style='margin:-6px 2px 20px;color:var(--muted);font-size:12.5px;line-height:1.5;max-width:900px'>Integration figures reflect current integration &amp; CRF status and cover only clients already live or done implementing. <strong>&ldquo;Needs action&rdquo;</strong> counts Active clients tagged &ldquo;Pending&rdquo; or &ldquo;SSO only (no data sync required)&rdquo;; clients tagged &ldquo;No Sprout HR&rdquo; or &ldquo;No Activation Required&rdquo; are not counted.</p>" +
+            "<div class='charts'><div class='card'><div class='section-head'><h2>Client status</h2><span class='note' id='" + key + "StatusTotal'></span></div><div class='donut-wrap'><div class='donut' id='" + key + "Donut'><div class='center'><span class='big num' id='" + key + "DonutTotal'>—</span><span class='cap'>clients</span></div></div><div class='legend' id='" + key + "Legend'></div></div></div></div>" +
+            "<div class='section-head'><h2>Client roster</h2><span class='note' id='" + key + "RosterNote'></span></div>" +
+            "<div class='toolbar'>" +
+              "<div class='search'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m21 21-4.3-4.3'/></svg><input id='" + key + "Search' type='text' placeholder='Search company name…' autocomplete='off'/></div>" +
+              "<select class='flt' id='" + key + "FStatus'><option value=''>All account status</option></select>" +
+              "<select class='flt' id='" + key + "FInteg'><option value=''>All integration status</option></select>" +
+              "<select class='flt' id='" + key + "FCsm'><option value=''>All CSMs</option></select>" +
+              "<button class='btn' id='" + key + "Clear'>Clear</button>" +
+              "<button class='btn primary' id='" + key + "Export'>Export CSV</button>" +
+              "<button class='btn' id='" + key + "Refresh'>Refresh</button>" +
+            "</div>" +
+            "<div class='table-wrap'><div class='table-scroll'><table><thead id='" + key + "Head'></thead><tbody id='" + key + "Body'></tbody></table></div><div class='tablefoot' id='" + key + "Foot'></div></div>";
+          document.getElementById(key + 'Search').addEventListener('input', function(e){ st.q = e.target.value; renderRoster(); });
+          document.getElementById(key + 'FStatus').addEventListener('change', function(e){ st.status = e.target.value; renderRoster(); });
+          document.getElementById(key + 'FInteg').addEventListener('change', function(e){ st.integ = e.target.value; renderRoster(); });
+          document.getElementById(key + 'FCsm').addEventListener('change', function(e){ st.csm = e.target.value; renderRoster(); });
+          document.getElementById(key + 'Clear').addEventListener('click', function(){ st = { q:'', status:'', integ:'', csm:'' }; document.getElementById(key + 'Search').value = ''; [key+'FStatus', key+'FInteg', key+'FCsm'].forEach(function(id){ document.getElementById(id).value = ''; }); renderRoster(); });
+          document.getElementById(key + 'Export').addEventListener('click', exportCSV);
+          document.getElementById(key + 'Refresh').addEventListener('click', function(){ load(true); });
         }
         function load(force){
           if(loaded && !force) return;
-          var tb = byId('Body');
-          tb.innerHTML = "<tr><td><div class='empty'>Loading data…</div></td></tr>";
-          fetch('/api/rawtab/' + key + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
+          if(!built){ shell(); built = true; }
+          var tb = document.getElementById(key + 'Body'); if(tb) tb.innerHTML = "<tr><td><div class='empty'>Loading " + esc(title) + " data…</div></td></tr>";
+          fetch('/api/report/' + key + (force ? '?refresh=1' : ''), { credentials:'same-origin' })
             .then(function(res){ if(!res.ok) return res.json().then(function(j){ throw new Error(j.message || ('HTTP '+res.status)); }); return res.json(); })
             .then(function(d){
-              loaded = true;
-              data = { headers: d.headers || [], rows: d.rows || [] };
-              byId('Note').textContent = data.rows.length + ' rows · ' + data.headers.length + ' columns · live from the source sheet';
-              buildFilters();
-              render();
+              loaded = true; DATA = d;
+              if(!filtersFilled){ populateFilters(); filtersFilled = true; }
+              document.getElementById(key + 'Note').textContent = d.clients.length + ' clients · live from the ' + title + ' tab';
+              document.getElementById(key + 'RosterNote').textContent = d.clients.length + ' records · live from source sheet';
+              renderKpis(); renderDonut(); renderRoster();
             })
             .catch(function(err){
-              tb.innerHTML = "<tr><td><div class='empty' style='color:#c23a3a'><strong>Could not load data.</strong>" + esc(err.message) + "</div></td></tr>";
+              var b = document.getElementById(key + 'Body'); if(b) b.innerHTML = "<tr><td><div class='empty' style='color:#c23a3a'><strong>Could not load data.</strong>" + esc(err.message) + "</div></td></tr>";
             });
         }
-        function exportCSV(){
-          var clean = function(v){ v = String(v==null?'':v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; };
-          var lines = [data.headers.map(clean).join(',')].concat(data.rows.map(function(r){ return data.headers.map(function(_, i){ return clean(r[i]); }).join(','); }));
-          var blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-          var a = document.createElement('a');
-          a.href = URL.createObjectURL(blob); a.download = filename;
-          document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
-        }
-        byId('Search').addEventListener('input', render);
-        byId('Refresh').addEventListener('click', function(){ load(true); });
-        byId('Export').addEventListener('click', exportCSV);
         return { load: load };
       }
 
       var reports = {
-        teamtailor: makeRawReport('teamtailor', 'tt', 'teamtailor.csv'),
-        disprz: makeRawReport('disprz', 'dz', 'disprz.csv'),
-        hubstaff: makeRawReport('hubstaff', 'hs', 'hubstaff.csv'),
+        teamtailor: makeProductReport('teamtailor', 'Teamtailor'),
+        disprz: makeProductReport('disprz', 'Disprz'),
+        hubstaff: makeProductReport('hubstaff', 'Hubstaff'),
       };
     })();
   </script>
