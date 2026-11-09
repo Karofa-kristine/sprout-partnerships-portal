@@ -3,7 +3,7 @@
 require('dotenv').config();
 const path = require('path');
 const express = require('express');
-const session = require('express-session');
+const cookieSession = require('cookie-session');
 
 const auth = require('./src/auth');
 const cache = require('./src/cache');
@@ -26,17 +26,18 @@ access.ensureSignInDomains();
 
 app.set('trust proxy', 1);
 app.use(express.json());
+// Stateless, signed-cookie sessions. The whole session (just the small `user`
+// object) lives in the cookie, so no server-side store is needed — this works
+// identically on a persistent server and on serverless (e.g. Vercel), where
+// there is no shared memory between invocations.
 app.use(
-  session({
-    secret: process.env.SESSION_SECRET || 'dev-insecure-secret-change-me',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: String(process.env.SECURE_COOKIES) === 'true',
-      maxAge: 1000 * 60 * 60 * 8, // 8h
-    },
+  cookieSession({
+    name: 'sppsess',
+    keys: [process.env.SESSION_SECRET || 'dev-insecure-secret-change-me'],
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: String(process.env.SECURE_COOKIES) === 'true',
+    maxAge: 1000 * 60 * 60 * 8, // 8h
   })
 );
 
@@ -159,7 +160,14 @@ app.get('/api/rawtab/:key', auth.requireAuth, async (req, res) => {
 // above, so static files here are the supporting css/js + login page.
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
-app.listen(PORT, () => {
-  console.log(`Sprout Partnerships Portal listening on http://localhost:${PORT}`);
-  if (!SPREADSHEET_ID) console.warn('⚠  SPREADSHEET_ID is not set — see .env.example');
-});
+// Start a listener only when run directly (local `npm start` / persistent host).
+// On serverless (Vercel), server.js is required by api/index.js, which exports
+// `app` as the request handler — no listener is created.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Sprout Partnerships Portal listening on http://localhost:${PORT}`);
+    if (!SPREADSHEET_ID) console.warn('⚠  SPREADSHEET_ID is not set — see .env.example');
+  });
+}
+
+module.exports = app;

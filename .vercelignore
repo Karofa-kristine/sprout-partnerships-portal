@@ -1,0 +1,6 @@
+# Secrets — never upload these; set them as Vercel Environment Variables instead.
+.env
+service-account.json
+
+# Installed fresh by Vercel during the build.
+node_modules

@@ -86,7 +86,8 @@ function mount(app) {
   });
 
   app.post('/auth/logout', (req, res) => {
-    req.session.destroy(() => res.json({ ok: true }));
+    req.session = null; // cookie-session: clears the signed session cookie
+    res.json({ ok: true });
   });
 
   app.get('/api/me', (req, res) => {
