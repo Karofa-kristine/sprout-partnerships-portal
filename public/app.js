@@ -52,13 +52,45 @@ function billPill(v, okRe) {
 function parseDate(s) { var t = Date.parse(s); return isNaN(t) ? 0 : t; }
 
 var DATA = null;     // full API payload
-var WIN = 12;        // trailing months window
+// Headcount progress window: January 2026 onward (auto-extends as new month
+// columns are added to the sheet going forward).
+var HC_FROM = Date.parse('January 1, 2026');
+function winStartIdx() {
+  var m = (DATA && DATA.months) || [];
+  for (var i = 0; i < m.length; i++) { var t = Date.parse(m[i]); if (!isNaN(t) && t >= HC_FROM) return i; }
+  return 0;
+}
+function shortMonth(label) {
+  var p = String(label || '').split(' ');
+  return (p[0] ? p[0].slice(0, 3) : label) + (p[1] ? " '" + p[1].slice(2) : '');
+}
 var MONTHS = [];     // sliced month labels
 var state = { q: '', status: '', sw: '', paid: '', pboxInv: '', csm: '' };
 var sort = { key: 'co', dir: 1 };
 
 /* take the trailing-window slice of a client's hc array */
-function hcWindow(hc) { return hc.slice(Math.max(0, hc.length - WIN)); }
+function hcWindow(hc) { return hc.slice(winStartIdx()); }
+
+/* Roster cell: mini headcount sparkline (since Jan 2026) + latest value. */
+function hcTrendCell(c) {
+  var nums = hcWindow(c.hc).filter(function (v) { return v != null; });
+  var last = lastHC(c.hc);
+  if (nums.length < 2) return "<span style='color:var(--faint)'>" + (last == null ? '—' : last) + '</span>';
+  return "<span style='display:inline-flex;align-items:center;gap:6px;justify-content:flex-end'>" +
+    sparkline(c.hc, 64, 20) + "<span class='num' style='font-size:12.5px'>" + last + '</span></span>';
+}
+
+/* Drawer: month-by-month headcount chips from Jan 2026 to the latest month. */
+function hcTable(c) {
+  var win = hcWindow(c.hc);
+  if (!win.some(function (v) { return v != null; })) return "<div style='color:var(--muted);font-size:12px'>No monthly headcount recorded yet.</div>";
+  return "<div style='display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px'>" + MONTHS.map(function (mLabel, i) {
+    var v = win[i];
+    return "<div style='min-width:52px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:4px 6px;background:var(--surface-2)'>" +
+      "<div style='font-size:9.5px;color:var(--faint);font-family:var(--font-mono)'>" + esc(shortMonth(mLabel)) + '</div>' +
+      "<div class='num' style='font-size:12.5px;font-weight:600'>" + (v == null ? '—' : v) + '</div></div>';
+  }).join('') + '</div>';
+}
 
 /* ---------- charts ---------- */
 function sparkline(hcFull, w, h) {
@@ -168,6 +200,7 @@ function filtered() {
   rows.sort(function (a, b) {
     var x, y;
     if (sort.key === 'hc') { x = a.lic == null ? -1 : a.lic; y = b.lic == null ? -1 : b.lic; }
+    else if (sort.key === 'hclast') { x = lastHC(a.hc); x = x == null ? -1 : x; y = lastHC(b.hc); y = y == null ? -1 : y; }
     else if (sort.key === 'closed') { x = parseDate(a.closed); y = parseDate(b.closed); }
     else if (sort.key === 'start') { x = parseDate(a.start); y = parseDate(b.start); }
     else if (sort.key === 'end') { x = parseDate(a.end); y = parseDate(b.end); }
@@ -201,7 +234,7 @@ function render() {
   renderChips(); renderSortIndicators();
   var rows = filtered(), tb = $('#tbody'); tb.innerHTML = '';
   if (!rows.length) {
-    tb.appendChild(el('tr', null, "<td colspan='11'><div class='empty'><strong>No clients match these filters.</strong>Try clearing a filter or searching a different name.</div></td>"));
+    tb.appendChild(el('tr', null, "<td colspan='12'><div class='empty'><strong>No clients match these filters.</strong>Try clearing a filter or searching a different name.</div></td>"));
   } else {
     rows.forEach(function (c) {
       var tr = el('tr'); tr.tabIndex = 0;
@@ -217,7 +250,8 @@ function render() {
         "<td class='csm'>" + (c.csm === 'Unassigned' ? "<span style='color:var(--faint)'>Unassigned</span>" : esc(c.csm)) + '</td>' +
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.start || '—') + '</td>' +
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.end || '—') + '</td>' +
-        "<td class='r hc num'>" + (c.lic == null ? '—' : c.lic) + '</td>';
+        "<td class='r hc num'>" + (c.lic == null ? '—' : c.lic) + '</td>' +
+        "<td class='r'>" + hcTrendCell(c) + '</td>';
       tr.onclick = function () { openDrawer(c); };
       tr.onkeydown = function (e) { if (e.key === 'Enter') openDrawer(c); };
       tb.appendChild(tr);
@@ -246,8 +280,9 @@ function openDrawer(c) {
       (c.sw === '—' ? '' : "<span class='pill' style='background:var(--surface-2);border:1px solid var(--border);color:" + swColor + "'><span class='d' style='background:" + swColor + "'></span>Pbox: " + esc(c.sw) + '</span>') +
     '</div></div>' +
     "<div class='dr-body'>" +
-      "<h4>Headcount trend · last " + WIN + " months</h4>" +
+      "<h4>Headcount trend · since January 2026</h4>" +
       "<div class='trend'><div class='top'><span class='cur num'>" + (hc == null ? '—' : hc) + "</span><span class='delta " + dcls + "'>" + dtxt + '</span></div>' + trendChart(c.hc) + '</div>' +
+      '<h4>Monthly headcount · since January 2026</h4>' + hcTable(c) +
       '<h4>Subscription &amp; ownership</h4><div class="fields">' +
         fieldRow('CSM / Owner', c.csm) + fieldRow('Current headcount', hc == null ? '—' : String(hc), true) +
         fieldRow('Closed date', c.closed, true) + fieldRow('Subscription start', c.start, true) + fieldRow('Subscription end', c.end, true) +
@@ -311,7 +346,7 @@ function sigOf(d) { return JSON.stringify([d.clients, d.billing, d.statusBreakdo
 function applyData(payload) {
   DATA = payload;
   lastSig = sigOf(payload);
-  MONTHS = (DATA.months || []).slice(Math.max(0, (DATA.months || []).length - WIN));
+  MONTHS = (DATA.months || []).slice(winStartIdx());
   $('#loading').style.display = 'none';
   $('#app').style.display = '';
   if (!$('#fStatus').dataset.filled) { populateFilters(); $('#fStatus').dataset.filled = '1'; }
