@@ -179,27 +179,31 @@ function tally(values) {
   );
 }
 
-function buildKpis(status, integration) {
+function buildKpis(status, clients) {
   const find = (arr, re) => (arr.find((x) => re.test(norm(x.name))) || {}).count || 0;
   const active = find(status, /^active$/);
   const ongoing = find(status, /ongoing.*implementation/);
-  const activated = find(integration, /^activated$/);
-  // Any Integration Status that starts with "Pending" (plain Pending,
-  // "Pending with Peoplebox", "Pending (Transition to Sprout)").
-  const pending = integration
-    .filter((x) => /^pending/.test(norm(x.name)))
-    .reduce((sum, x) => sum + x.count, 0);
-  const activeTotal = active || 0;
+
+  // Integration figures reflect current integration + CRF status and cover only
+  // clients already live / done implementing (Client Status = Active). Clients
+  // that don't need an integration ("No Sprout HR", "No Activation Required")
+  // and churned integrations are excluded from the base entirely.
+  const EXCLUDE = /^(no sprout hr|no activation required|churn)$/i;
+  const relevant = clients.filter((c) => /^active$/i.test(c.acct) && !EXCLUDE.test(c.act));
+  const activated = relevant.filter((c) => /^activated$/i.test(c.act)).length;
+  // Everything relevant that isn't activated yet: Pending, SSO only, ongoing CRF.
+  const needsAction = relevant.length - activated;
+
   return [
     { val: active, name: 'Active clients', meta: 'Live Peoplebox subscriptions', tone: 'active' },
     { val: ongoing, name: 'Ongoing implementation', meta: 'In onboarding pipeline', tone: 'ongoing' },
     {
       val: activated,
       name: 'Integrations activated',
-      meta: activeTotal ? `of ${activeTotal} active · ${Math.round((activated / activeTotal) * 100)}% utilized` : '',
+      meta: relevant.length ? `of ${relevant.length} needing integration · ${Math.round((activated / relevant.length) * 100)}% activated` : '',
       tone: 'indigo',
     },
-    { val: pending, name: 'Pending integration', meta: 'with Peoplebox + transition', tone: 'onhold' },
+    { val: needsAction, name: 'Needs action', meta: 'Active clients: integration still to complete', tone: 'onhold' },
   ];
 }
 
@@ -234,7 +238,7 @@ function transform(grid, source) {
   return {
     generatedAt: new Date().toISOString(),
     source,
-    kpis: buildKpis(statusBreakdown, integrationBreakdown),
+    kpis: buildKpis(statusBreakdown, clients),
     billing: buildBilling(clients),
     statusBreakdown,
     integrationBreakdown,
