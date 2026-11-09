@@ -171,7 +171,8 @@ function filtered() {
     else if (sort.key === 'closed') { x = parseDate(a.closed); y = parseDate(b.closed); }
     else if (sort.key === 'start') { x = parseDate(a.start); y = parseDate(b.start); }
     else if (sort.key === 'end') { x = parseDate(a.end); y = parseDate(b.end); }
-    else { x = a.co.toLowerCase(); y = b.co.toLowerCase(); }
+    // Any other column sorts as text (blanks/"—" grouped at one end).
+    else { var g = function (o) { var v = o[sort.key]; return (v == null || v === '—') ? '' : String(v).toLowerCase(); }; x = g(a); y = g(b); }
     return x < y ? -sort.dir : x > y ? sort.dir : 0;
   });
   return rows;
