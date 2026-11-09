@@ -217,9 +217,13 @@ function buildBilling(clients) {
   const pendingToSprout = clients.filter((c) => /^pending$/i.test(c.paidSprout)).length;
   const invoicedByPbox = clients.filter((c) => c.pboxInvoiced === 'Yes').length;
   const pboxInvoicePaid = clients.filter((c) => /^paid$/i.test(c.pboxInvoice)).length;
+  // Headcount = the sheet's "SUM OF HEADCOUNT" / "# of Licenses Initially
+  // Purchased" column (c.lic). This is the seat count the invoice covers and is
+  // stable, unlike the monthly headcount series, which has per-client gaps that
+  // would otherwise blend different as-of months into one total.
   const pboxPaidHeadcount = clients
     .filter((c) => /^paid$/i.test(c.pboxInvoice))
-    .reduce((sum, c) => sum + (lastHc(c.hc) || 0), 0);
+    .reduce((sum, c) => sum + (c.lic || 0), 0);
   return { total, paidToSprout, pendingToSprout, invoicedByPbox, pboxInvoicePaid, pboxPaidHeadcount };
 }
 
