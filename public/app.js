@@ -167,7 +167,7 @@ function filtered() {
   });
   rows.sort(function (a, b) {
     var x, y;
-    if (sort.key === 'hc') { x = lastHC(a.hc) || -1; y = lastHC(b.hc) || -1; }
+    if (sort.key === 'hc') { x = a.lic == null ? -1 : a.lic; y = b.lic == null ? -1 : b.lic; }
     else if (sort.key === 'closed') { x = parseDate(a.closed); y = parseDate(b.closed); }
     else if (sort.key === 'start') { x = parseDate(a.start); y = parseDate(b.start); }
     else if (sort.key === 'end') { x = parseDate(a.end); y = parseDate(b.end); }
@@ -205,7 +205,7 @@ function render() {
   } else {
     rows.forEach(function (c) {
       var tr = el('tr'); tr.tabIndex = 0;
-      var hc = lastHC(c.hc), isA = c.acct === 'Active';
+      var isA = c.acct === 'Active';
       tr.innerHTML =
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.closed || '—') + '</td>' +
         "<td class='co'><span class='stripe' style='background:" + (isA ? 'var(--s-active)' : 'var(--s-neutral)') + "'></span>" + esc(c.co) + "<span class='cid'>" + esc(c.cid) + '</span></td>' +
@@ -217,7 +217,7 @@ function render() {
         "<td class='csm'>" + (c.csm === 'Unassigned' ? "<span style='color:var(--faint)'>Unassigned</span>" : esc(c.csm)) + '</td>' +
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.start || '—') + '</td>' +
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(c.end || '—') + '</td>' +
-        "<td class='r hc num'>" + (hc == null ? '—' : hc) + '</td>';
+        "<td class='r hc num'>" + (c.lic == null ? '—' : c.lic) + '</td>';
       tr.onclick = function () { openDrawer(c); };
       tr.onkeydown = function (e) { if (e.key === 'Enter') openDrawer(c); };
       tb.appendChild(tr);
