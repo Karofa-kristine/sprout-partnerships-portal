@@ -246,6 +246,9 @@
                 t.appendChild(badge); }
             }
           });
+          // Single-product partner → go straight to their assigned tab on login
+          // (internal @sprout.ph users stay on the Overview and see all tiles).
+          if(!IS_INTERNAL && ACCESS.length === 1) activateTab(ACCESS[0]);
         });
 
       // ---- Peoplebox Subscriptions (RADAR) ----
