@@ -323,6 +323,8 @@
         var loaded = false, built = false, filtersFilled = false, DATA = null;
         var st = { q:'', status:'', integ:'', csm:'' }, srt = { key:'co', dir:1 };
         var panel = document.getElementById(key + 'Panel');
+        var HC_FROM = Date.parse('January 1, 2026');
+        function winStart(){ var m = (DATA && DATA.months) || []; for(var i=0;i<m.length;i++){ var t = Date.parse(m[i]); if(!isNaN(t) && t >= HC_FROM) return i; } return m.length; }
         var pd = function(s){ var t = Date.parse(s); return isNaN(t) ? 0 : t; };
         var uniq = function(a){ var o={}, r=[]; a.forEach(function(v){ if(v && !o[v]){ o[v]=1; r.push(v); } }); return r; };
 
@@ -336,9 +338,17 @@
             { key:'end', label:'Sub. end', type:'date' },
           ];
           if(DATA && DATA.clients.some(function(x){ return x.lic != null; })) c.push({ key:'lic', label:'Initial Headcount', type:'num' });
+          // One column per month (Jan 2026 to current), like the Google Sheet.
+          if(DATA && DATA.months && DATA.months.length){
+            var ws = winStart();
+            DATA.months.slice(ws).forEach(function(label, idx){
+              c.push({ key:'m' + (ws + idx), label: shortMonth(label), type:'num', month: ws + idx });
+            });
+          }
           return c;
         }
         function cell(cl, col){
+          if(col.month != null){ var mv = cl.hc ? cl.hc[col.month] : null; return "<td class='r num' style='font-size:12px;color:var(--muted)'>" + (mv == null ? '—' : mv) + "</td>"; }
           if(col.key === 'co') return "<td class='co'>" + esc(cl.co) + "</td>";
           if(col.key === 'acct'){ var isA = cl.acct === 'Active'; return "<td><span class='pill' style='background:" + (isA?'var(--accent-soft)':'#F0EFEF') + ";color:" + (isA?'var(--accent)':'var(--s-neutral)') + "'><span class='d' style='background:" + (isA?'var(--accent)':'var(--s-neutral)') + "'></span>" + esc(cl.acct) + "</span></td>"; }
           if(col.key === 'csm') return "<td>" + (cl.csm === 'Unassigned' ? "<span style='color:var(--faint)'>Unassigned</span>" : esc(cl.csm)) + "</td>";
@@ -347,6 +357,7 @@
           return "<td>" + esc(cl[col.key] || '—') + "</td>";
         }
         function sval(cl, col){
+          if(col.month != null){ var mv = cl.hc ? cl.hc[col.month] : null; return mv == null ? -1 : mv; }
           if(col.type === 'date') return pd(cl[col.key]);
           if(col.type === 'num') return cl[col.key] == null ? -1 : cl[col.key];
           var v = cl[col.key]; return (v == null || v === '—') ? '' : String(v).toLowerCase();
@@ -382,7 +393,7 @@
           var cs = cols();
           var head = document.getElementById(key + 'Head');
           head.innerHTML = '<tr>' + cs.map(function(col){
-            var isR = col.key === 'lic', arrow = srt.key === col.key ? (srt.dir > 0 ? ' ▲' : ' ▼') : '';
+            var isR = col.type === 'num', arrow = srt.key === col.key ? (srt.dir > 0 ? ' ▲' : ' ▼') : '';
             return "<th class='rsort" + (isR?' r':'') + "' data-k='" + col.key + "' style='cursor:pointer;white-space:nowrap'>" + esc(col.label) + "<span class='arrow'>" + arrow + "</span></th>";
           }).join('') + '</tr>';
           head.querySelectorAll('th.rsort').forEach(function(th){
@@ -403,7 +414,7 @@
         function exportCSV(){
           var cs = cols(), head = cs.map(function(c){ return c.label; }), lines = [head.join(',')];
           filtered().forEach(function(c){
-            var vals = cs.map(function(col){ var v = c[col.key]; return (v == null || v === '—') ? '' : v; });
+            var vals = cs.map(function(col){ if(col.month != null){ var mv = c.hc ? c.hc[col.month] : null; return mv == null ? '' : mv; } var v = c[col.key]; return (v == null || v === '—') ? '' : v; });
             lines.push(vals.map(function(v){ v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; }).join(','));
           });
           var blob = new Blob([lines.join('\r\n')], { type:'text/csv;charset=utf-8;' });
