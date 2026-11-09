@@ -181,7 +181,11 @@
     (function(){
       // Per-product access: each partner domain sees only its own product;
       // internal Sprout accounts see all. Enforced on the server too.
-      var ACCESS = null;
+      var ACCESS = null, IS_INTERNAL = false;
+      // Partner-domain accounts are view-only: hide every Export CSV button.
+      // (Internal @sprout.ph users keep export.) Data access itself is already
+      // gated per product on the server; this just removes the export option.
+      function hideExports(){ var els = document.querySelectorAll('#exportBtn, [id$="Export"]'); for(var i=0;i<els.length;i++) els[i].style.display = 'none'; }
       function productOf(tab){ return tab === 'subs' ? 'peoplebox' : tab; }
       function canAccess(tab){ if(tab === 'overview') return true; return !!ACCESS && ACCESS.indexOf(productOf(tab)) >= 0; }
 
@@ -216,6 +220,8 @@
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(a){
           ACCESS = (a && a.products) || [];
+          IS_INTERNAL = !!(a && a.internal);
+          if(!IS_INTERNAL) hideExports();
           var shown = 0;
           document.querySelectorAll('.ptile').forEach(function(t){
             var ok = ACCESS.indexOf(productOf(t.dataset.goto)) >= 0;
@@ -445,6 +451,7 @@
           document.getElementById(key + 'Clear').addEventListener('click', function(){ st = { q:'', status:'', integ:'', csm:'' }; document.getElementById(key + 'Search').value = ''; [key+'FStatus', key+'FInteg', key+'FCsm'].forEach(function(id){ document.getElementById(id).value = ''; }); renderRoster(); });
           document.getElementById(key + 'Export').addEventListener('click', exportCSV);
           document.getElementById(key + 'Refresh').addEventListener('click', function(){ load(true); });
+          if(!IS_INTERNAL){ var ex = document.getElementById(key + 'Export'); if(ex) ex.style.display = 'none'; }
         }
         function load(force){
           if(loaded && !force) return;
