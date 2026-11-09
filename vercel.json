@@ -1,11 +1,18 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/index.js": {
-      "maxDuration": 60
+  "services": {
+    "sprout-partnerships-portal": {
+      "root": ".",
+      "entrypoint": "server.js",
+      "buildCommand": "npm install"
     }
   },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index.js" }
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "sprout-partnerships-portal"
+      }
+    }
   ]
 }
