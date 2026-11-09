@@ -182,7 +182,8 @@ function tally(values) {
 function buildKpis(status, clients) {
   const find = (arr, re) => (arr.find((x) => re.test(norm(x.name))) || {}).count || 0;
   const active = find(status, /^active$/);
-  const ongoing = find(status, /ongoing.*implementation/);
+  // Clients currently tagged "Ongoing CRF" (CRF form in progress), any status.
+  const ongoingCrf = clients.filter((c) => /crf/i.test(c.act)).length;
 
   // Integration figures reflect current integration + CRF status and cover only
   // clients already live / done implementing (Client Status = Active). Clients
@@ -191,12 +192,12 @@ function buildKpis(status, clients) {
   const EXCLUDE = /^(no sprout hr|no activation required|churn)$/i;
   const relevant = clients.filter((c) => /^active$/i.test(c.acct) && !EXCLUDE.test(c.act));
   const activated = relevant.filter((c) => /^activated$/i.test(c.act)).length;
-  // Everything relevant that isn't activated yet: Pending, SSO only, ongoing CRF.
-  const needsAction = relevant.length - activated;
+  // Only Active clients still tagged "Pending" or "SSO only (no data sync required)".
+  const needsAction = relevant.filter((c) => /^pending$/i.test(c.act) || /^sso only/i.test(c.act)).length;
 
   return [
     { val: active, name: 'Active clients', meta: 'Live Peoplebox subscriptions', tone: 'active' },
-    { val: ongoing, name: 'Ongoing implementation', meta: 'In onboarding pipeline', tone: 'ongoing' },
+    { val: ongoingCrf, name: 'Ongoing CRF', meta: 'Clients with CRF in progress', tone: 'ongoing' },
     {
       val: activated,
       name: 'Integrations activated',
