@@ -99,6 +99,8 @@ async function billing(hubspotIds) {
       currency                 currency
     FROM ${BILLING}
     WHERE hubspot_company_id IN (${inList})
+      AND COALESCE(LOWER(collection_status),'') NOT LIKE '%cancel%'
+      AND COALESCE(LOWER(invoice_status),'')    NOT LIKE '%cancel%'
     ORDER BY invoice_date DESC, client
     LIMIT 5000`;
   return runStatement(sql);
