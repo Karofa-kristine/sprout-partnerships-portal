@@ -207,16 +207,55 @@ Partner UI rules (frontend, in `index.html`):
 
 ---
 
-## 10. Open items / things the user may ask next
+## 10. Pending items (checklist)
 
-- **Billing tab scope:** currently **all** invoices for Peoplebox clients (~930),
-  including non-Peoplebox and cancelled ones. Optional refinements discussed but not
-  done: a toggle to narrow to `invoice_memo LIKE '%peoplebox%'` (~48), and/or hide
-  `Cancelled - CM/CN` collection-status rows.
-- **Teamtailor/Disprz/Hubstaff** could also get a Billing tab the same way (they have
-  `hubspot_company_id` via their sheet tabs — would need mapping in their transform).
-- Subscriptions/billing table columns aren't individually sortable yet (the Peoplebox
-  roster is).
+Carried over from the build sessions. Nothing here is broken — these are
+enhancements, cleanups, verifications, and ongoing maintenance.
+
+### A. Needs the user's action / decision
+- [ ] **Vercel plan:** Hobby (free) tier is for non-commercial use; this is an internal
+      business tool, so strictly it should be on **Pro**. Not a technical blocker.
+- [ ] **Re-enter the new RADAR token** in the separate **Client Payment Monitoring**
+      dashboard (same Databricks connection; its old token was the expired one).
+- [ ] **Confirm the partner experience** with a real partner-domain test account
+      (peoplebox.ai / teamtailor.com / disprz.com / hubstaff.com) — view-only export,
+      auto-redirect to their tab, locked tiles. Can't be verified from a @sprout.ph login.
+- [ ] **Decommission old Render services** if not already — both `*.onrender.com`
+      services are dead/retired; delete them in the Render dashboard to avoid confusion.
+
+### B. Billing tab (gold_billing_360) refinements — discussed, not done
+- [ ] Optional toggle to narrow from **all invoices (~930)** to **Peoplebox-memo only**
+      (`invoice_memo LIKE '%peoplebox%'`, ~48).
+- [ ] Optional filter to **hide cancelled** invoices (`collection_status` =
+      `Cancelled - CM/CN`) — the old line-items report hid cancelled; this one shows them.
+- [ ] Make the Billing table **columns sortable** (click headers) like the Peoplebox roster.
+
+### C. Feature enhancements
+- [ ] **Billing tab for Teamtailor / Disprz / Hubstaff** — same `gold_billing_360`
+      approach; needs `hubspot_company_id` surfaced from those tabs in `transform.js`
+      (Peoplebox already maps `c.hsid`).
+- [ ] **Disprz/Hubstaff monthly headcount**: their Jan 2026+ columns are blank until
+      that data is entered in the sheet (they currently hold only 2025 figures). No code
+      change — just awaiting sheet data. Optionally, show their existing 2025 months.
+- [ ] **Teamtailor** has no headcount data at all → no month columns; revisit if that
+      data gets added to its tab.
+- [ ] Optionally lock partners entirely to their one tab (hide the top-bar "Overview"
+      button for them) so they can't reach the locked-tile Overview at all.
+
+### D. Tech debt / cleanup (safe to leave)
+- [ ] `src/radar.js` old line-item query is gone, but `server.js` still has the unused
+      `/api/rawtab/:key` route and `makeRawReport` is replaced — dead code could be removed.
+- [ ] `app.js` has leftover `hcTrendCell()` / sparkline-cell helpers no longer used after
+      switching the roster to per-month columns — harmless, removable.
+
+### E. Ongoing maintenance (recurring)
+- [ ] **RADAR token expiry** — Databricks PATs expire. When the Billing tab errors/empties,
+      regenerate the token and update it on Vercel (see §9 gotcha #2). This will recur.
+
+### Verification still owed (do after any related change)
+- [ ] Open each tab in the live site and eyeball: Peoplebox KPIs/roster/month columns,
+      Teamtailor/Disprz/Hubstaff reports, and the Billing tab totals vs. expectation.
+      (Automated checks pass; final rendered-pixel confirmation is the user's.)
 
 ---
 
