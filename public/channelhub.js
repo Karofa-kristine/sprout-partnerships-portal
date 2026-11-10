@@ -37,7 +37,7 @@
       if (state.stage && r.stage !== state.stage) return false;
       if (state.rep && r.sales_rep !== state.rep) return false;
       if (!q) return true;
-      return [r.partner, r.deal_name, r.company, r.sales_rep, r.stage].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
+      return [r.partner, r.deal_name, r.deal_id, r.company, r.sales_rep, r.stage].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
     });
   }
 
@@ -114,12 +114,13 @@
   }
 
   function dealsTable(deals) {
-    var h = "<table class='bl-sub'><thead><tr><th>Deal</th><th>Company</th><th>Stage</th><th>Journey</th><th>Sales rep</th>" +
+    var h = "<table class='bl-sub'><thead><tr><th>Deal</th><th>Deal ID</th><th>Company</th><th>Stage</th><th>Journey</th><th>Sales rep</th>" +
       "<th>Created</th><th>Close</th><th class='r'>Amount</th><th class='r'>MRR</th><th class='r'>Rev-share MRR</th><th>Forecast</th></tr></thead><tbody>";
     deals.forEach(function (r) {
       var id = r.deal_id || '', open = !!openD[id], c = JOURNEY_COLOR[r.journey] || 'var(--muted)';
       h += "<tr class='bl-inv ch-d' data-d='" + esc(id) + "' tabindex='0' aria-expanded='" + open + "'>" +
         "<td style='" + NAME + "'>" + chev(open) + esc(r.deal_name || '—') + "</td>" +
+        "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + esc(id || '—') + "</td>" +
         "<td style='" + TXT + "font-size:12.5px'>" + esc(r.company || '—') + "</td>" +
         "<td style='" + TXT + "font-size:12.5px'>" + esc(r.stage || '—') + "</td>" +
         "<td><span style='font-weight:600;color:" + c + "'>" + esc(r.journey || '—') + "</span></td>" +
@@ -128,7 +129,7 @@
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + day(r.close_date || r.projected_close_date) + "</td>" +
         "<td class='r num'>" + money2(r.amount) + "</td><td class='r num'>" + money2(r.mrr) + "</td><td class='r num'>" + money2(r.revshare_mrr) + "</td>" +
         "<td style='" + TXT + "font-size:12.5px'>" + esc(r.forecast_category || '—') + "</td></tr>";
-      if (open) h += "<tr class='bl-nest'><td colspan='11'>" + linesHtml(id) + "</td></tr>";
+      if (open) h += "<tr class='bl-nest'><td colspan='12'>" + linesHtml(id) + "</td></tr>";
     });
     return h + '</tbody></table>';
   }
