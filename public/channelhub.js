@@ -23,6 +23,9 @@
   var isLost = function (r) { return r.journey === 'Closed Lost'; };
   var inRange = function (r) { return state.range === 'all' || String(r.create_date || '').slice(0, 4) === state.range; };
   var rangeLabel = function () { return state.range === 'all' ? '2025–2026' : state.range; };
+  // Inline so wrapping works even if an old styles.css is cached.
+  var TXT = 'white-space:normal;overflow-wrap:break-word;vertical-align:top;line-height:1.4;min-width:120px;max-width:300px;';
+  var NAME = 'white-space:normal;overflow-wrap:break-word;vertical-align:top;line-height:1.4;min-width:220px;max-width:340px;font-weight:600;';
   var chev = function (open) { return "<span class='bl-chev" + (open ? ' open' : '') + "' aria-hidden='true'>&#9656;</span>"; };
   var JOURNEY_COLOR = { MQL: '#7C8CF8', Opportunity: '#C2841C', Customer: '#17872F', 'Closed Lost': '#c23a3a' };
 
@@ -116,15 +119,15 @@
     deals.forEach(function (r) {
       var id = r.deal_id || '', open = !!openD[id], c = JOURNEY_COLOR[r.journey] || 'var(--muted)';
       h += "<tr class='bl-inv ch-d' data-d='" + esc(id) + "' tabindex='0' aria-expanded='" + open + "'>" +
-        "<td style='font-weight:600;max-width:280px'>" + chev(open) + esc(r.deal_name || '—') + "</td>" +
-        "<td style='font-size:12.5px'>" + esc(r.company || '—') + "</td>" +
-        "<td style='font-size:12.5px'>" + esc(r.stage || '—') + "</td>" +
+        "<td style='" + NAME + "'>" + chev(open) + esc(r.deal_name || '—') + "</td>" +
+        "<td style='" + TXT + "font-size:12.5px'>" + esc(r.company || '—') + "</td>" +
+        "<td style='" + TXT + "font-size:12.5px'>" + esc(r.stage || '—') + "</td>" +
         "<td><span style='font-weight:600;color:" + c + "'>" + esc(r.journey || '—') + "</span></td>" +
-        "<td style='font-size:12.5px'>" + esc(r.sales_rep || '—') + "</td>" +
+        "<td style='" + TXT + "font-size:12.5px'>" + esc(r.sales_rep || '—') + "</td>" +
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + day(r.create_date) + "</td>" +
         "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + day(r.close_date || r.projected_close_date) + "</td>" +
         "<td class='r num'>" + money2(r.amount) + "</td><td class='r num'>" + money2(r.mrr) + "</td><td class='r num'>" + money2(r.revshare_mrr) + "</td>" +
-        "<td style='font-size:12.5px'>" + esc(r.forecast_category || '—') + "</td></tr>";
+        "<td style='" + TXT + "font-size:12.5px'>" + esc(r.forecast_category || '—') + "</td></tr>";
       if (open) h += "<tr class='bl-nest'><td colspan='11'>" + linesHtml(id) + "</td></tr>";
     });
     return h + '</tbody></table>';
@@ -138,9 +141,9 @@
     return "<table class='bl-sub bl-lines'><thead><tr><th>Product</th><th>Product family</th><th>Clan</th><th>Status</th><th>Billing</th>" +
       "<th class='r'>Qty</th><th class='r'>Unit price</th><th class='r'>Discount</th><th class='r'>Amount</th><th class='r'>MRR</th><th class='r'>Rev share</th><th class='r'>Term (mo)</th></tr></thead><tbody>" +
       st.rows.map(function (l) {
-        return "<tr><td style='font-size:12.5px;font-weight:600'>" + esc(l.product_name || '—') + "</td>" +
-          "<td style='font-size:12.5px'>" + esc(l.parent_product || '—') + "</td><td style='font-size:12.5px'>" + esc(l.clan || '—') + "</td>" +
-          "<td style='font-size:12.5px'>" + esc(l.product_status || '—') + "</td><td style='font-size:12.5px'>" + esc(l.recurring_billing_frequency || '—') + "</td>" +
+        return "<tr><td style='" + NAME + "font-size:12.5px'>" + esc(l.product_name || '—') + "</td>" +
+          "<td style='" + TXT + "font-size:12.5px'>" + esc(l.parent_product || '—') + "</td><td style='" + TXT + "font-size:12.5px'>" + esc(l.clan || '—') + "</td>" +
+          "<td style='" + TXT + "font-size:12.5px'>" + esc(l.product_status || '—') + "</td><td style='" + TXT + "font-size:12.5px'>" + esc(l.recurring_billing_frequency || '—') + "</td>" +
           "<td class='r num'>" + (l.quantity == null ? '—' : esc(num(l.quantity))) + "</td><td class='r num'>" + money2(l.unit_price) + "</td>" +
           "<td class='r num'>" + money2(l.discount) + "</td><td class='r num' style='font-weight:600'>" + money2(l.amount) + "</td>" +
           "<td class='r num'>" + money2(l.mrr) + "</td><td class='r num'>" + money2(l.revenue_share) + "</td>" +

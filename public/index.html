@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Sprout Partnerships Portal</title>
   <link rel="icon" href="/sprout-leaf.png"/>
-  <link rel="stylesheet" href="/styles.css"/>
+  <link rel="stylesheet" href="/styles.css?v=20261110c"/>
 </head>
 <body>
   <div class="topbar">
@@ -217,8 +217,8 @@
   <div class="overlay" id="overlay"></div>
   <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 
-  <script src="/app.js"></script>
-  <script src="/channelhub.js"></script>
+  <script src="/app.js?v=20261110c"></script>
+  <script src="/channelhub.js?v=20261110c"></script>
   <script>
     // Navigation. All access is via the Overview tiles (data-goto="x"); the
     // top-bar "Overview" button returns home. Adding a report is a tile +
@@ -379,7 +379,7 @@
             "<td class='num' style='font-size:12.5px;font-weight:600'>" + chev(open) + esc(ref||'—') + "</td>" +
             "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(r.invoice_date||'—') + "</td>" +
             "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(r.due_date||'—') + "</td>" +
-            "<td style='font-size:12.5px'>" + esc(r.invoice_status||'—') + "</td>" +
+            "<td style='font-size:12.5px;white-space:normal;overflow-wrap:break-word;vertical-align:top;min-width:110px;max-width:220px'>" + esc(r.invoice_status||'—') + "</td>" +
             "<td><span style='font-weight:600;color:" + colColor(r.collection_status) + "'>" + esc(r.collection_status||'—') + "</span></td>" +
             "<td class='r num'>" + money(r.amount) + "</td>" +
             "<td class='r num'>" + money(r.amount_paid) + "</td>" +
@@ -426,7 +426,7 @@
               var v = r[c.key];
               if(c.money) return "<td class='r num'>" + money(v) + "</td>";
               if(c.num) return "<td class='r num'>" + (v == null || v === '' ? '—' : esc(v)) + "</td>";
-              return "<td style='font-size:12.5px'>" + esc(v == null || v === '' ? '—' : v) + "</td>";
+              return "<td style='font-size:12.5px;white-space:normal;overflow-wrap:break-word;vertical-align:top;min-width:120px;max-width:320px'>" + esc(v == null || v === '' ? '—' : v) + "</td>";
             }).join('') + "</tr>";
           }).join('') + "</tbody></table>";
       }
