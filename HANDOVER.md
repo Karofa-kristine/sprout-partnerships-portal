@@ -127,8 +127,9 @@ the same Peoplebox clients: identical **930 invoices**, **100% invoice-number ov
 (0 only-in-either), **all 930 amounts match exactly**, and **totals are identical
 (₱141,647,855.55)**. AR self-consistency also holds: amount = paid (₱133,856,664.89) +
 balance (₱7,791,190.66) on every row (0 inconsistent). So gold_billing_360 reconciles
-with the old NetSuite source and adds the paid/balance/aging detail. (738 of 930 are
-paid/closed; 101 are cancelled — note the report currently shows cancelled too.)
+with the old NetSuite source and adds the paid/balance/aging detail. (Of the 930,
+101 were cancelled; the report now **excludes cancelled** invoices → 829 shown,
+total ₱113,188,639.61, outstanding balance ₱7,791,190.66.)
 
 ---
 
@@ -234,8 +235,8 @@ enhancements, cleanups, verifications, and ongoing maintenance.
 ### B. Billing tab (gold_billing_360) refinements — discussed, not done
 - [ ] Optional toggle to narrow from **all invoices (~930)** to **Peoplebox-memo only**
       (`invoice_memo LIKE '%peoplebox%'`, ~48).
-- [ ] Optional filter to **hide cancelled** invoices (`collection_status` =
-      `Cancelled - CM/CN`) — the old line-items report hid cancelled; this one shows them.
+- [x] ~~Hide cancelled invoices~~ — DONE (2026-11-10): the `gold_billing_360` query now
+      excludes any `collection_status`/`invoice_status` containing "cancel" (930 → 829).
 - [ ] Make the Billing table **columns sortable** (click headers) like the Peoplebox roster.
 
 ### C. Feature enhancements
