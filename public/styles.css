@@ -299,3 +299,18 @@ footer{max-width:1280px;margin:0 auto;padding:0 28px 40px;color:var(--faint);fon
 #channelhubPanel table.bl-sub td{padding:7px 12px;}
 #channelhubPanel table.bl-lines{border-left-color:var(--border-strong);}
 @media (max-width:900px){.ch-kpis{grid-template-columns:repeat(2,1fr);}.ch-stage{grid-template-columns:1fr 60px 40px;}.ch-stage-a{display:none;}}
+
+/* Drill-down tables (Billing + ChannelHub): keep every value inside its own
+   column. Text cells wrap within a sensible width instead of spilling into the
+   next column; numbers, dates and amounts stay on one line and right-aligned. */
+#subsPanel table.bl-sub,#channelhubPanel table.bl-sub{table-layout:auto;width:100%;}
+#subsPanel table.bl-sub td,#channelhubPanel table.bl-sub td{white-space:normal;overflow-wrap:break-word;word-break:normal;vertical-align:top;min-width:90px;max-width:320px;line-height:1.4;}
+#subsPanel table.bl-sub td.num,#subsPanel table.bl-sub td.r,
+#channelhubPanel table.bl-sub td.num,#channelhubPanel table.bl-sub td.r{white-space:nowrap;min-width:0;max-width:none;}
+#subsPanel table.bl-sub thead th,#channelhubPanel table.bl-sub thead th{vertical-align:bottom;white-space:nowrap;}
+#subsPanel table.bl-sub td .bl-chev,#channelhubPanel table.bl-sub td .bl-chev{float:left;margin-top:1px;}
+#subsPanel table.bl-sub td:has(.bl-chev),#channelhubPanel table.bl-sub td:has(.bl-chev){padding-left:10px;}
+#subsPanel tr.bl-nest>td,#channelhubPanel tr.bl-nest>td{overflow-x:auto;max-width:0;}
+#subsPanel tr.bl-nest table.bl-sub,#channelhubPanel tr.bl-nest table.bl-sub{width:auto;min-width:calc(100% - 12px);}
+#subsPanel table.bl-sub td,#channelhubPanel table.bl-sub td{min-width:120px;}
+#subsPanel table.bl-sub td:first-child,#channelhubPanel table.bl-sub td:first-child{min-width:220px;}
