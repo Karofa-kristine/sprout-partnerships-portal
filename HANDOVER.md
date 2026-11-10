@@ -122,6 +122,14 @@ tracker's Peoplebox clients by `hubspot_company_id`. Returns ~930 invoices with
 amount / paid / balance / collection status / aging / days overdue. Same RADAR
 world as the separate "Client Payment Monitoring" dashboard.
 
+**Validated 2026-11-10** against the prior source (`netsuite_invoices_summary`) for
+the same Peoplebox clients: identical **930 invoices**, **100% invoice-number overlap**
+(0 only-in-either), **all 930 amounts match exactly**, and **totals are identical
+(₱141,647,855.55)**. AR self-consistency also holds: amount = paid (₱133,856,664.89) +
+balance (₱7,791,190.66) on every row (0 inconsistent). So gold_billing_360 reconciles
+with the old NetSuite source and adds the paid/balance/aging detail. (738 of 930 are
+paid/closed; 101 are cancelled — note the report currently shows cancelled too.)
+
 ---
 
 ## 6. Features (current state)
