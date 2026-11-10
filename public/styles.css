@@ -314,3 +314,12 @@ footer{max-width:1280px;margin:0 auto;padding:0 28px 40px;color:var(--faint);fon
 #subsPanel tr.bl-nest table.bl-sub,#channelhubPanel tr.bl-nest table.bl-sub{width:auto;min-width:calc(100% - 12px);}
 #subsPanel table.bl-sub td,#channelhubPanel table.bl-sub td{min-width:120px;}
 #subsPanel table.bl-sub td:first-child,#channelhubPanel table.bl-sub td:first-child{min-width:220px;}
+/* Peoplebox Ongoing Leads */
+#pbleadsPanel tr.pbl-d{cursor:pointer;}
+#pbleadsPanel tr.pbl-d:hover td{background:var(--surface-2);}
+#pbleadsPanel tr.pbl-d[aria-expanded="true"] td{background:var(--brand-soft);}
+#pbleadsPanel tr.bl-nest>td{padding:0 0 0 28px;background:var(--surface-2);border-bottom:1px solid var(--border);overflow-x:auto;max-width:0;}
+#pbleadsPanel table.bl-sub{min-width:calc(100% - 12px);width:auto;margin:6px 0 12px;border-left:2px solid var(--border-strong);}
+#pbleadsPanel table.bl-sub thead th{background:transparent;padding:8px 12px;}
+#pbleadsPanel table.bl-sub td{padding:7px 12px;}
+#pbleadsPanel table{table-layout:auto;}

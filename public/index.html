@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Sprout Partnerships Portal</title>
   <link rel="icon" href="/sprout-leaf.png"/>
-  <link rel="stylesheet" href="/styles.css?v=20261110d"/>
+  <link rel="stylesheet" href="/styles.css?v=20261110e"/>
 </head>
 <body>
   <div class="topbar">
@@ -81,6 +81,13 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
       </span>
       <span class="txt"><b>Peoplebox Billing</b><small>Invoice billing &amp; AR from RADAR, matched by HubSpot Company ID</small></span>
+      <span class="arr">→</span>
+    </button>
+    <button class="subnav-card" data-goto="pbleads" id="pblCard" style="display:none">
+      <span class="ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
+      </span>
+      <span class="txt"><b>Peoplebox Ongoing Leads</b><small>Open deals with Peoplebox / Perform Pro line items, from RADAR · Sprout staff only</small></span>
       <span class="arr">→</span>
     </button>
 
@@ -179,6 +186,34 @@
   <div class="wrap tabpanel hide" id="disprzPanel" data-tab="disprz"></div>
   <div class="wrap tabpanel hide" id="hubstaffPanel" data-tab="hubstaff"></div>
 
+  <div class="wrap tabpanel hide" id="pbleadsPanel" data-tab="pbleads">
+    <button class="backlink" data-goto="peoplebox">← Back to Peoplebox</button>
+    <div class="section-head"><h2>Peoplebox Ongoing Leads</h2><span class="note" id="pblStamp"></span></div>
+    <p style="margin:-6px 2px 18px;color:var(--muted);font-size:12.5px;line-height:1.5;max-width:900px">Open deals (MQL or Opportunity) in any pipeline that include a <strong>Peoplebox</strong>, <strong>Perform Pro</strong> or <strong>Sprout Perform Pro</strong> line item. Source: RADAR <code>shared.revops.silver_deals</code> + <code>silver_line_items</code> + <code>silver_company</code>.</p>
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="pblSearch" type="text" placeholder="Search deal / deal ID / company / rep / product…" autocomplete="off"/>
+      </div>
+      <select class="flt" id="pblPipeline" aria-label="Pipeline"><option value="">All pipelines</option></select>
+      <select class="flt" id="pblStage" aria-label="Stage"><option value="">All stages</option></select>
+      <select class="flt" id="pblRep" aria-label="Sales rep"><option value="">All sales reps</option></select>
+      <button class="btn" id="pblRefresh">🔄 Refresh</button>
+    </div>
+    <div class="kpis" id="pblKpis"></div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Deal</th><th>Deal ID</th><th>Company</th><th>Pipeline</th><th>Stage</th><th>Journey</th><th>Sales rep</th><th>Partner</th><th>Created</th><th>Projected close</th><th class="r">Peoplebox amount</th><th class="r">Peoplebox MRR</th><th>Peoplebox products</th>
+          </tr></thead>
+          <tbody id="pblBody"><tr><td colspan="13"><div class="empty">Open this report to load leads.</div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="tablefoot" id="pblFoot"></div>
+    </div>
+  </div>
+
   <div class="wrap tabpanel hide" id="channelhubPanel" data-tab="channelhub">
     <button class="backlink" data-goto="overview">← Back to Overview</button>
     <div class="section-head"><h2>ChannelHub</h2><span class="note" id="chStamp"></span></div>
@@ -217,8 +252,9 @@
   <div class="overlay" id="overlay"></div>
   <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 
-  <script src="/app.js?v=20261110d"></script>
-  <script src="/channelhub.js?v=20261110d"></script>
+  <script src="/app.js?v=20261110e"></script>
+  <script src="/channelhub.js?v=20261110e"></script>
+  <script src="/pbleads.js?v=20261110e"></script>
   <script>
     // Navigation. All access is via the Overview tiles (data-goto="x"); the
     // top-bar "Overview" button returns home. Adding a report is a tile +
@@ -276,6 +312,8 @@
           ACCESS = (a && a.products) || [];
           IS_INTERNAL = !!(a && a.internal);
           if(!IS_INTERNAL) hideExports();
+          // Internal-only sub-report inside the Peoplebox tab.
+          var pblCard = document.getElementById('pblCard'); if(pblCard) pblCard.style.display = (ACCESS.indexOf('pbleads') >= 0) ? '' : 'none';
           // Everyone sees every product tile; tiles the account can't open are
           // shown locked (and blocked from opening — the server also 403s the data).
           document.querySelectorAll('.ptile').forEach(function(t){
@@ -662,6 +700,7 @@
         disprz: makeProductReport('disprz', 'Disprz'),
         hubstaff: makeProductReport('hubstaff', 'Hubstaff'),
         channelhub: window.ChannelHub,
+        pbleads: window.PeopleboxLeads,
       };
     })();
   </script>

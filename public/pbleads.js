@@ -1,0 +1,143 @@
+/* Peoplebox Ongoing Leads — open HubSpot deals (MQL | Opportunity) across all
+ * pipelines that carry a Peoplebox line item ("Peoplebox", "Perform Pro",
+ * "Sprout Perform Pro"). Data: GET /api/peoplebox/leads (RADAR silver_deals +
+ * silver_company + silver_line_items). Internal-only (product key 'pbleads').
+ */
+(function () {
+  'use strict';
+  var rows = [], linesBy = {}, loaded = false, loading = false;
+  var state = { q: '', stage: '', pipeline: '', rep: '' };
+  var openD = {};
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; }); };
+  var num = function (v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; };
+  var money = function (v) { return num(v).toLocaleString(undefined, { maximumFractionDigits: 0 }); };
+  var money2 = function (v) { return v == null || v === '' ? '—' : num(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  var day = function (ts) { return ts ? String(ts).slice(0, 10) : '—'; };
+  var W = 'white-space:normal;overflow-wrap:break-word;vertical-align:top;line-height:1.4;';
+  var TXT = W + 'min-width:110px;max-width:280px;font-size:12.5px;';
+  var NAME = W + 'min-width:220px;max-width:340px;font-weight:600;';
+  var JC = { MQL: '#7C8CF8', Opportunity: '#C2841C' };
+  var chev = function (open) { return "<span class='bl-chev" + (open ? ' open' : '') + "' aria-hidden='true'>&#9656;</span>"; };
+
+  function scoped() {
+    var q = state.q.toLowerCase();
+    return rows.filter(function (r) {
+      if (state.stage && r.stage !== state.stage) return false;
+      if (state.pipeline && r.pipeline !== state.pipeline) return false;
+      if (state.rep && r.sales_rep !== state.rep) return false;
+      if (!q) return true;
+      return [r.deal_name, r.deal_id, r.company, r.sales_rep, r.partner, r.products, r.stage].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
+    });
+  }
+
+  function kpi(val, name, meta, color) {
+    return "<div class='kpi' style='--c:" + color + "'><div class='val'>" + val + "</div><div class='name'>" + esc(name) + "</div><div class='meta'>" + esc(meta) + '</div></div>';
+  }
+
+  function renderKpis(list) {
+    var sum = function (k) { return list.reduce(function (t, r) { return t + num(r[k]); }, 0); };
+    var mql = list.filter(function (r) { return r.journey === 'MQL'; }).length;
+    var opp = list.filter(function (r) { return r.journey === 'Opportunity'; }).length;
+    $('pblKpis').innerHTML =
+      kpi(list.length, 'Ongoing Peoplebox leads', 'open deals with a Peoplebox / Perform Pro line item', 'var(--accent)') +
+      kpi(mql, 'MQL', 'early-stage leads', JC.MQL) +
+      kpi(opp, 'Opportunity', 'in active sales stages', JC.Opportunity) +
+      kpi('₱' + money(sum('pb_amount')), 'Peoplebox line-item value', 'sum of Peoplebox line amounts · MRR ₱' + money(sum('pb_mrr')), 'var(--brand)');
+  }
+
+  function linesHtml(id) {
+    var ls = linesBy[id] || [];
+    if (!ls.length) return "<div class='bl-lines-msg'>No Peoplebox line items on this deal.</div>";
+    return "<table class='bl-sub bl-lines'><thead><tr><th>Product</th><th>Product family</th><th>Status</th><th>Billing</th>" +
+      "<th class='r'>Qty</th><th class='r'>Users</th><th class='r'>Unit price</th><th class='r'>Discount</th><th class='r'>Amount</th><th class='r'>MRR</th><th class='r'>Term (mo)</th></tr></thead><tbody>" +
+      ls.map(function (l) {
+        return "<tr><td style='" + NAME + "font-size:12.5px'>" + esc(l.product_name || '—') + '</td>' +
+          "<td style='" + TXT + "'>" + esc(l.parent_product || '—') + "</td><td style='" + TXT + "'>" + esc(l.product_status || '—') + '</td>' +
+          "<td style='" + TXT + "'>" + esc(l.recurring_billing_frequency || '—') + '</td>' +
+          "<td class='r num'>" + (l.quantity == null ? '—' : esc(num(l.quantity))) + "</td><td class='r num'>" + (l.number_of_users == null ? '—' : esc(num(l.number_of_users))) + '</td>' +
+          "<td class='r num'>" + money2(l.unit_price) + "</td><td class='r num'>" + money2(l.discount) + '</td>' +
+          "<td class='r num' style='font-weight:600'>" + money2(l.amount) + "</td><td class='r num'>" + money2(l.mrr) + '</td>' +
+          "<td class='r num'>" + (l.contract_term_months == null ? '—' : esc(num(l.contract_term_months))) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function render() {
+    var list = scoped();
+    renderKpis(list);
+    $('pblBody').innerHTML = list.length ? list.map(function (r) {
+      var id = r.deal_id || '', open = !!openD[id];
+      var h = "<tr class='pbl-d' data-d='" + esc(id) + "' tabindex='0' aria-expanded='" + open + "'>" +
+        "<td style='" + NAME + "'>" + chev(open) + esc(r.deal_name || '—') + '</td>' +
+        "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + esc(id || '—') + '</td>' +
+        "<td style='" + TXT + "'>" + esc(r.company || '—') + '</td>' +
+        "<td style='" + TXT + "'>" + esc(r.pipeline || '—') + '</td>' +
+        "<td style='" + TXT + "'>" + esc(r.stage || '—') + '</td>' +
+        "<td style='white-space:nowrap'><span style='font-weight:600;color:" + (JC[r.journey] || 'var(--muted)') + "'>" + esc(r.journey || '—') + '</span></td>' +
+        "<td style='" + TXT + "'>" + esc(r.sales_rep || '—') + '</td>' +
+        "<td style='" + TXT + "'>" + esc(r.partner || '—') + '</td>' +
+        "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + day(r.create_date) + '</td>' +
+        "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + day(r.projected_close_date) + '</td>' +
+        "<td class='r num' style='white-space:nowrap'>" + money2(r.pb_amount) + '</td>' +
+        "<td class='r num' style='white-space:nowrap'>" + money2(r.pb_mrr) + '</td>' +
+        "<td style='" + TXT + "'>" + esc(r.products || '—') + '</td></tr>';
+      if (open) h += "<tr class='bl-nest'><td colspan='13'>" + linesHtml(id) + '</td></tr>';
+      return h;
+    }).join('') : "<tr><td colspan='13'><div class='empty'><strong>No ongoing Peoplebox leads match.</strong></div></td></tr>";
+    $('pblFoot').textContent = list.length + ' of ' + rows.length + ' ongoing Peoplebox leads · click a lead to see its Peoplebox line items';
+  }
+
+  function fill(id, label, key, cur) {
+    var seen = {}, vals = [];
+    rows.forEach(function (r) { var v = r[key]; if (v && !seen[v]) { seen[v] = 1; vals.push(v); } });
+    vals.sort();
+    $(id).innerHTML = '<option value="">' + label + '</option>' + vals.map(function (v) { return '<option' + (v === cur ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
+  }
+
+  function msg(html, err) { $('pblBody').innerHTML = "<tr><td colspan='13'><div class='empty'" + (err ? " style='color:#c23a3a'" : '') + '>' + html + '</div></td></tr>'; }
+
+  function load(force) {
+    if ((loaded && !force) || loading) return;
+    loading = true; $('pblRefresh').disabled = true; $('pblKpis').innerHTML = '';
+    msg("<div class='sp' style='margin:0 auto 10px'></div>Loading ongoing Peoplebox leads from RADAR…");
+    fetch('/api/peoplebox/leads' + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error(j.message || ('HTTP ' + r.status)); }); return r.json(); })
+      .then(function (d) {
+        if (!d.configured) { msg('<strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server.'); return; }
+        rows = d.rows || []; linesBy = {};
+        (d.lines || []).forEach(function (l) { (linesBy[l.deal_id] = linesBy[l.deal_id] || []).push(l); });
+        loaded = true;
+        fill('pblStage', 'All stages', 'stage', state.stage);
+        fill('pblPipeline', 'All pipelines', 'pipeline', state.pipeline);
+        fill('pblRep', 'All sales reps', 'sales_rep', state.rep);
+        $('pblStamp').textContent = d.fetchedAt ? 'RADAR data as of ' + new Date(d.fetchedAt).toLocaleString() : '';
+        render();
+      })
+      .catch(function (e) { msg('<strong>Could not connect to RADAR.</strong>' + esc(e.message), true); })
+      .then(function () { loading = false; $('pblRefresh').disabled = false; });
+  }
+
+  function onToggle(e) {
+    if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+    var d = e.target.closest('tr.pbl-d'); if (!d) return;
+    if (e.type === 'keydown') e.preventDefault();
+    var id = d.getAttribute('data-d'); openD[id] = !openD[id]; render();
+  }
+
+  var inited = false;
+  function init() {
+    if (inited || !$('pblBody')) return; inited = true;
+    $('pblBody').addEventListener('click', onToggle);
+    $('pblBody').addEventListener('keydown', onToggle);
+    $('pblRefresh').addEventListener('click', function () { load(true); });
+    $('pblSearch').addEventListener('input', function (e) { state.q = e.target.value; if (loaded) render(); });
+    $('pblStage').addEventListener('change', function (e) { state.stage = e.target.value; if (loaded) render(); });
+    $('pblPipeline').addEventListener('change', function (e) { state.pipeline = e.target.value; if (loaded) render(); });
+    $('pblRep').addEventListener('change', function (e) { state.rep = e.target.value; if (loaded) render(); });
+  }
+  document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState !== 'loading') init();
+
+  window.PeopleboxLeads = { load: function () { load(false); } };
+})();

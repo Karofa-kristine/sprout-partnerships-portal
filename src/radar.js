@@ -276,4 +276,67 @@ async function channelDealLines(dealId) {
   return runStatement(sql);
 }
 
-module.exports = { isConfigured, billing, invoiceLines, channelDeals, channelDealLines };
+// ── Peoplebox ongoing leads (all pipelines) ───────────────────────────────
+// Open deals (client_journey_stage MQL | Opportunity) in silver_deals that have
+// at least one Peoplebox line item in silver_line_items: product_name /
+// parent_product containing "Peoplebox" or "Perform Pro" (covers "Sprout
+// Perform Pro", "Perform Pro" and "Peoplebox"). Columns per the RADAR spec only.
+const PB_LINE_MATCH = `(LOWER(COALESCE(li.product_name,''))   LIKE '%peoplebox%'
+      OR LOWER(COALESCE(li.parent_product,'')) LIKE '%peoplebox%'
+      OR LOWER(COALESCE(li.product_name,''))   LIKE '%perform pro%'
+      OR LOWER(COALESCE(li.parent_product,'')) LIKE '%perform pro%')`;
+const PB_OPEN = `d.client_journey_stage IN ('MQL', 'Opportunity')`;
+
+async function peopleboxLeads() {
+  const dealsSql = `
+    WITH pb AS (
+      SELECT li.deal_id,
+             concat_ws(', ', collect_set(li.product_name)) products,
+             SUM(li.amount) pb_amount,
+             SUM(li.mrr)    pb_mrr
+      FROM shared.revops.silver_line_items li
+      WHERE ${PB_LINE_MATCH}
+      GROUP BY li.deal_id
+    )
+    SELECT
+      CAST(d.deal_id AS STRING)                 deal_id,
+      d.deal_name                               deal_name,
+      d.pipeline_name                           pipeline,
+      d.deal_type                               deal_type,
+      d.stage_label                             stage,
+      d.client_journey_stage                    journey,
+      CAST(d.create_date AS STRING)             create_date,
+      CAST(d.projected_close_date AS STRING)    projected_close_date,
+      CAST(d.amount AS DOUBLE)                  amount,
+      d.mrr                                     mrr,
+      pb.pb_amount                              pb_amount,
+      pb.pb_mrr                                 pb_mrr,
+      pb.products                               products,
+      d.sales_rep                               sales_rep,
+      d.partner_on_record                       partner,
+      d.forecast_category                       forecast_category,
+      d.segment                                 segment,
+      CAST(d.headcount AS DOUBLE)               headcount,
+      c.Company_name                            company
+    FROM shared.revops.silver_deals d
+    JOIN pb ON pb.deal_id = d.deal_id
+    LEFT JOIN shared.revops.silver_company c ON c.Company_id = d.company_id
+    WHERE ${PB_OPEN}
+    ORDER BY d.create_date DESC
+    LIMIT 5000`;
+  const linesSql = `
+    SELECT
+      CAST(li.deal_id AS STRING) deal_id,
+      li.product_name, li.parent_product, li.product_status,
+      li.recurring_billing_frequency, li.quantity, li.number_of_users,
+      li.unit_price, li.discount, li.amount, li.mrr, li.contract_term_months
+    FROM shared.revops.silver_line_items li
+    JOIN shared.revops.silver_deals d ON d.deal_id = li.deal_id
+    WHERE ${PB_LINE_MATCH} AND ${PB_OPEN}
+    ORDER BY li.deal_id, li.amount DESC
+    LIMIT 20000`;
+  const [deals, lines] = await Promise.all([runStatement(dealsSql), runStatement(linesSql)]);
+  return { deals, lines };
+}
+
+module.exports = { isConfigured, billing, invoiceLines, channelDeals, channelDealLines, peopleboxLeads };

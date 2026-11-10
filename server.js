@@ -185,6 +185,25 @@ app.get('/api/channelhub/lines', auth.requireAuth, requireProduct('channelhub'),
   }
 });
 
+// ── Peoplebox ongoing leads (RADAR, internal-only: product key 'pbleads') ─
+const PBL_CACHE_KEY = 'radar-pb-leads';
+app.get('/api/peoplebox/leads', auth.requireAuth, requireProduct('pbleads'), async (req, res) => {
+  try {
+    if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
+    if (req.query.refresh !== '1') {
+      const cached = cache.get(PBL_CACHE_KEY);
+      if (cached) return res.json({ configured: true, cached: true, rows: cached.rows, lines: cached.lines, fetchedAt: cached.at });
+    }
+    const { deals, lines } = await radar.peopleboxLeads();
+    const at = new Date().toISOString();
+    cache.set(PBL_CACHE_KEY, { rows: deals, lines, at }, TTL);
+    res.json({ configured: true, cached: false, rows: deals, lines, fetchedAt: at });
+  } catch (err) {
+    console.error('Failed to load Peoplebox leads:', err);
+    res.status(502).json({ error: 'radar_failed', message: err.message });
+  }
+});
+
 // ── Raw sheet-tab dumps (Teamtailor, Disprz, Hubstaff) ───
 // Reads a whitelisted tab and returns all columns + rows generically, so the
 // portal reflects whatever the sheet holds (no fixed schema). The key must be

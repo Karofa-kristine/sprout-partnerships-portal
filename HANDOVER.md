@@ -327,3 +327,22 @@ deals → click a deal for its line items. YTD scope = deal created OR closed th
 `CH_TO` in `radar.js`). The YTD/All-time toggle was replaced by a **lead created year**
 switch (2025–2026 / 2026 / 2025); every KPI is for the leads created in that period
 (cohort view, create_date basis). Partner table column "Deals" → **"Leads"**.
+
+---
+
+## Peoplebox Ongoing Leads (added 2026-11-10, not yet verified against live RADAR)
+
+Card **"Peoplebox Ongoing Leads"** inside the Peoplebox tab → `#pbleadsPanel`, UI in
+`public/pbleads.js`. **Internal-only** (product key `pbleads` in `INTERNAL_ONLY`,
+`src/access.js`); the card is hidden for partner accounts and the API returns 403.
+
+`GET /api/peoplebox/leads` → `radar.peopleboxLeads()` runs two queries:
+- **Leads:** `silver_deals` where `client_journey_stage IN ('MQL','Opportunity')`
+  (any pipeline) that have ≥1 `silver_line_items` row whose `product_name` or
+  `parent_product` contains "peoplebox" or "perform pro" (covers "Peoplebox",
+  "Perform Pro", "Sprout Perform Pro"); joined to `silver_company` for the name.
+  Includes the Peoplebox-only line-item amount/MRR and product list per deal.
+- **Line items:** those Peoplebox line items for the same open deals (shown when a
+  lead row is clicked).
+UI: search (deal / deal ID / company / rep / product), pipeline, stage and rep filters,
+🔄 Refresh, KPIs (ongoing leads, MQL, Opportunity, Peoplebox line-item value + MRR).

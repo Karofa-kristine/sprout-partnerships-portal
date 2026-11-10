@@ -26,7 +26,7 @@ function domainOf(email) {
 
 // Reports only internal Sprout accounts may open (they span every partner,
 // so no partner domain should ever see them).
-const INTERNAL_ONLY = ['channelhub'];
+const INTERNAL_ONLY = ['channelhub', 'pbleads'];
 
 function allowedProductsForDomain(domain) {
   if (internalDomains().includes(domain)) return Object.keys(PRODUCT_DOMAINS).concat(INTERNAL_ONLY);
