@@ -286,8 +286,12 @@ const PB_LINE_MATCH = `(LOWER(COALESCE(li.product_name,''))   LIKE '%peoplebox%'
       OR LOWER(COALESCE(li.parent_product,'')) LIKE '%peoplebox%'
       OR LOWER(COALESCE(li.product_name,''))   LIKE '%perform pro%'
       OR LOWER(COALESCE(li.parent_product,'')) LIKE '%perform pro%')`;
-// Leads created in 2025 or 2026 only (create_date, PH time).
-const PB_SCOPE = `d.create_date >= TIMESTAMP '2025-01-01' AND d.create_date < TIMESTAMP '2027-01-01'`;
+// Leads created in 2025 or 2026 only (create_date, PH time), excluding deals in
+// the "Project Handover" and "Contract Signed" stages (matched on stage_label,
+// case/space-insensitive).
+const PB_EXCLUDED_STAGES = ['project handover', 'contract signed'];
+const PB_SCOPE = `d.create_date >= TIMESTAMP '2025-01-01' AND d.create_date < TIMESTAMP '2027-01-01'
+      AND LOWER(TRIM(COALESCE(d.stage_label,''))) NOT IN (${PB_EXCLUDED_STAGES.map(sqlStr).join(', ')})`;
 
 async function peopleboxLeads() {
   const dealsSql = `

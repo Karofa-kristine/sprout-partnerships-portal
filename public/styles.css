@@ -335,3 +335,22 @@ footer{max-width:1280px;margin:0 auto;padding:0 28px 40px;color:var(--faint);fon
 #pbleadsPanel .cdate{display:flex;flex-direction:column;gap:4px;min-width:130px;}
 #pbleadsPanel .cdate input{color-scheme:dark;}
 #pbleadsPanel select.cflt:focus,#pbleadsPanel .cdate input:focus{outline:2px solid var(--accent);outline-offset:0;}
+
+/* Peoplebox Leads: multi-select filters (button + tick-box list) */
+#pbleadsPanel .msel{position:relative;display:inline-block;min-width:170px;}
+#pbleadsPanel .msel.msel-col{display:block;min-width:120px;width:100%;}
+#pbleadsPanel .msel-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:8px 10px;cursor:pointer;text-align:left;}
+#pbleadsPanel .msel-col .msel-btn{border-radius:7px;background:var(--surface);font-size:12px;padding:5px 7px;text-transform:none;letter-spacing:0;font-weight:500;}
+#pbleadsPanel .msel.active .msel-btn{border-color:var(--accent);color:var(--accent);}
+#pbleadsPanel .msel-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#pbleadsPanel .msel-car{color:var(--muted);font-size:10px;flex:none;}
+#pbleadsPanel .msel-pop{display:none;position:fixed;z-index:200;min-width:220px;max-width:320px;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);padding:6px;text-transform:none;letter-spacing:0;font-weight:400;}
+#pbleadsPanel .msel.open .msel-pop{display:block;}
+#pbleadsPanel .msel-acts{display:flex;gap:6px;padding:2px 2px 6px;border-bottom:1px solid var(--border);margin-bottom:4px;}
+#pbleadsPanel .msel-acts button{flex:1;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text);border-radius:7px;font:inherit;font-size:12px;padding:4px 6px;cursor:pointer;}
+#pbleadsPanel .msel-acts button:hover{border-color:var(--accent);color:var(--accent);}
+#pbleadsPanel .msel-list{max-height:260px;overflow-y:auto;}
+#pbleadsPanel .msel-opt{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:6px;font-size:12.5px;color:var(--text);cursor:pointer;white-space:normal;line-height:1.35;}
+#pbleadsPanel .msel-opt:hover{background:var(--surface-2);}
+#pbleadsPanel .msel-opt input{margin-top:2px;accent-color:var(--accent);flex:none;}
+#pbleadsPanel .msel-empty{padding:8px;color:var(--muted);font-size:12px;}

@@ -7,8 +7,20 @@
 (function () {
   'use strict';
   var rows = [], linesBy = {}, loaded = false, loading = false;
-  var state = { q: '', stage: '', pipeline: '', rep: '', journey: '', forecast: '', year: '', status: '',
+  // Multi-select filters: each holds the list of ticked values ([] = all).
+  var state = { q: '', stage: [], pipeline: [], rep: [], journey: [], forecast: [], year: [], status: [],
     createdFrom: '', createdTo: '', closeFrom: '', closeTo: '' };
+  var NOT_SET = '(not set)';
+  var MS = [
+    { id: 'pblYear', key: 'year', label: 'Year', all: 'All years (2025–2026)', get: function (r) { return yearOf(r); }, desc: true },
+    { id: 'pblStatus', key: 'status', label: 'Status', all: 'All statuses', fixed: [['ongoing', 'Ongoing (MQL + Opportunity)'], ['won', 'Won'], ['lost', 'Lost']],
+      test: function (r, v) { return v === 'ongoing' ? isOngoing(r) : v === 'won' ? isWon(r) : isLost(r); } },
+    { id: 'pblForecast', key: 'forecast', label: 'Forecast', all: 'All forecast categories', get: function (r) { return r.forecast_category || NOT_SET; } },
+    { id: 'pblPipeline', key: 'pipeline', label: 'Pipeline', all: 'All', get: function (r) { return r.pipeline || NOT_SET; } },
+    { id: 'pblStage', key: 'stage', label: 'Stage', all: 'All', get: function (r) { return r.stage || NOT_SET; } },
+    { id: 'pblJourney', key: 'journey', label: 'Journey', all: 'All', get: function (r) { return r.journey || NOT_SET; } },
+    { id: 'pblRep', key: 'rep', label: 'Sales rep', all: 'All', get: function (r) { return r.sales_rep || NOT_SET; } },
+  ];
   // Date shown/filtered in the "Projected close date" column: the projected
   // close date, or the actual close date for closed leads that have none.
   var closeDay = function (r) { return String(r.projected_close_date || r.close_date || '').slice(0, 10); };
@@ -38,17 +50,14 @@
   function scoped() {
     var q = state.q.toLowerCase();
     return rows.filter(function (r) {
-      if (state.stage && r.stage !== state.stage) return false;
-      if (state.pipeline && r.pipeline !== state.pipeline) return false;
-      if (state.rep && r.sales_rep !== state.rep) return false;
-      if (state.journey && r.journey !== state.journey) return false;
+      for (var i = 0; i < MS.length; i++) {
+        var m = MS[i], sel = state[m.key];
+        if (!sel.length) continue;
+        var ok = m.test ? sel.some(function (v) { return m.test(r, v); }) : sel.indexOf(m.get(r)) >= 0;
+        if (!ok) return false;
+      }
       if (!inRange(String(r.create_date || '').slice(0, 10), state.createdFrom, state.createdTo)) return false;
       if (!inRange(closeDay(r), state.closeFrom, state.closeTo)) return false;
-      if (state.forecast && (r.forecast_category || '') !== state.forecast) return false;
-      if (state.year && yearOf(r) !== state.year) return false;
-      if (state.status === 'ongoing' && !isOngoing(r)) return false;
-      if (state.status === 'won' && !isWon(r)) return false;
-      if (state.status === 'lost' && !isLost(r)) return false;
       if (!q) return true;
       return [r.deal_name, r.deal_id, r.company, r.sales_rep, r.products, r.stage, r.forecast_category].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
     });
@@ -64,7 +73,7 @@
     var opp = list.filter(function (r) { return r.journey === 'Opportunity'; }).length;
     var won = list.filter(isWon), lost = list.filter(isLost);
     var wsum = function (a, k) { return a.reduce(function (t, r) { return t + num(r[k]); }, 0); };
-    var period = state.year ? 'created in ' + state.year : 'created 2025–2026';
+    var period = state.year.length ? 'created in ' + state.year.slice().sort().join(', ') : 'created 2025–2026';
     var closed = won.length + lost.length;
     $('pblKpis').innerHTML =
       kpi(list.length, 'Peoplebox leads', period + ' · with a Peoplebox / Perform Pro line item', 'var(--accent)') +
@@ -117,13 +126,79 @@
     $('pblFoot').textContent = list.length + ' of ' + rows.length + ' Peoplebox leads (created 2025–2026) · click a lead to see its Peoplebox line items';
   }
 
-  function fill(id, label, key, cur) {
-    // label is ignored for column-header filters (they read "All").
-    if ($(id) && $(id).classList.contains('cflt')) label = 'All';
+  // ---- Multi-select dropdown (button + tick-box list) ----
+  function mselOptions(m) {
+    if (m.fixed) return m.fixed;
     var seen = {}, vals = [];
-    rows.forEach(function (r) { var v = r[key]; if (v && !seen[v]) { seen[v] = 1; vals.push(v); } });
-    vals.sort();
-    $(id).innerHTML = '<option value="">' + label + '</option>' + vals.map(function (v) { return '<option' + (v === cur ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
+    rows.forEach(function (r) { var v = m.get(r); if (v && !seen[v]) { seen[v] = 1; vals.push(v); } });
+    vals.sort(function (a, b) { if (a === NOT_SET) return 1; if (b === NOT_SET) return -1; return a.localeCompare(b); });
+    if (m.desc) vals.reverse();
+    return vals.map(function (v) { return [v, v]; });
+  }
+  function mselSummary(m) {
+    var sel = state[m.key];
+    if (!sel.length) return m.all;
+    if (sel.length === 1) { var o = (m.fixed || []).filter(function (f) { return f[0] === sel[0]; })[0]; return o ? o[1] : sel[0]; }
+    return sel.length + ' selected';
+  }
+  function buildMsel(m) {
+    var el = $(m.id); if (!el) return;
+    var opts = mselOptions(m), sel = state[m.key];
+    // Drop ticked values that no longer exist after a refresh.
+    state[m.key] = sel.filter(function (v) { return opts.some(function (o) { return o[0] === v; }); });
+    var open = el.classList.contains('open');
+    el.innerHTML = "<button type='button' class='msel-btn' aria-haspopup='listbox' aria-expanded='" + open + "' title='" + esc(m.label) + "'>" +
+      "<span class='msel-txt'>" + esc(mselSummary(m)) + "</span><span class='msel-car' aria-hidden='true'>&#9662;</span></button>" +
+      "<div class='msel-pop' role='listbox' aria-multiselectable='true' aria-label='" + esc(m.label) + "'>" +
+      "<div class='msel-acts'><button type='button' data-act='all'>Select all</button><button type='button' data-act='none'>Clear</button></div>" +
+      "<div class='msel-list'>" + opts.map(function (o) {
+        var on = state[m.key].indexOf(o[0]) >= 0;
+        return "<label class='msel-opt'><input type='checkbox' value='" + esc(o[0]) + "'" + (on ? ' checked' : '') + '/><span>' + esc(o[1]) + '</span></label>';
+      }).join('') + (opts.length ? '' : "<div class='msel-empty'>No values</div>") + '</div></div>';
+  }
+  function buildAllMsel() { MS.forEach(buildMsel); }
+  function refreshSummaries() {
+    MS.forEach(function (m) { var el = $(m.id); if (!el) return; var t = el.querySelector('.msel-txt'); if (t) t.textContent = mselSummary(m);
+      el.classList.toggle('active', state[m.key].length > 0); });
+  }
+  function closeAllMsel(except) {
+    document.querySelectorAll('#pbleadsPanel .msel.open').forEach(function (el) {
+      if (el === except) return; el.classList.remove('open'); var b = el.querySelector('.msel-btn'); if (b) b.setAttribute('aria-expanded', 'false');
+    });
+  }
+  // The list is position:fixed so the scrolling table can't clip it; place it
+  // under its button (or above, if there's no room below) and keep it on-screen.
+  function placePop(el) {
+    var pop = el.querySelector('.msel-pop'), b = el.querySelector('.msel-btn'); if (!pop || !b) return;
+    var r = b.getBoundingClientRect(), w = Math.max(220, r.width);
+    pop.style.minWidth = w + 'px';
+    var left = Math.min(r.left, window.innerWidth - w - 8); pop.style.left = Math.max(8, left) + 'px';
+    var below = window.innerHeight - r.bottom, h = Math.min(pop.scrollHeight || 320, 340);
+    if (below < h + 12 && r.top > below) { pop.style.top = ''; pop.style.bottom = (window.innerHeight - r.top + 4) + 'px'; }
+    else { pop.style.bottom = ''; pop.style.top = (r.bottom + 4) + 'px'; }
+  }
+  function wireMsel(m) {
+    var el = $(m.id); if (!el) return;
+    el.addEventListener('click', function (e) {
+      var btn = e.target.closest('.msel-btn');
+      if (btn) {
+        var willOpen = !el.classList.contains('open'); closeAllMsel(el); el.classList.toggle('open', willOpen); btn.setAttribute('aria-expanded', String(willOpen));
+        if (willOpen) placePop(el);
+        return;
+      }
+      var act = e.target.closest('[data-act]');
+      if (act) {
+        state[m.key] = act.getAttribute('data-act') === 'all' ? mselOptions(m).map(function (o) { return o[0]; }) : [];
+        el.querySelectorAll('input[type=checkbox]').forEach(function (c) { c.checked = state[m.key].indexOf(c.value) >= 0; });
+        refreshSummaries(); if (loaded) render();
+      }
+    });
+    el.addEventListener('change', function (e) {
+      if (e.target.type !== 'checkbox') return;
+      state[m.key] = Array.prototype.filter.call(el.querySelectorAll('input[type=checkbox]'), function (c) { return c.checked; }).map(function (c) { return c.value; });
+      refreshSummaries(); if (loaded) render();
+    });
+    el.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAllMsel(); var b = el.querySelector('.msel-btn'); if (b) b.focus(); } });
   }
 
   function msg(html, err) { $('pblBody').innerHTML = "<tr><td colspan='13'><div class='empty'" + (err ? " style='color:#c23a3a'" : '') + '>' + html + '</div></td></tr>'; }
@@ -139,13 +214,7 @@
         rows = d.rows || []; linesBy = {};
         (d.lines || []).forEach(function (l) { (linesBy[l.deal_id] = linesBy[l.deal_id] || []).push(l); });
         loaded = true;
-        fill('pblStage', 'All stages', 'stage', state.stage);
-        fill('pblPipeline', 'All pipelines', 'pipeline', state.pipeline);
-        fill('pblRep', 'All sales reps', 'sales_rep', state.rep);
-        fill('pblJourney', 'All', 'journey', state.journey);
-        fill('pblForecast', 'All forecast categories', 'forecast_category', state.forecast);
-        var years = {}; rows.forEach(function (r) { var y = yearOf(r); if (y) years[y] = 1; });
-        $('pblYear').innerHTML = '<option value="">All years (2025–2026)</option>' + Object.keys(years).sort().reverse().map(function (y) { return '<option' + (y === state.year ? ' selected' : '') + '>' + y + '</option>'; }).join('');
+        buildAllMsel(); refreshSummaries();
         $('pblStamp').textContent = d.fetchedAt ? 'RADAR data as of ' + new Date(d.fetchedAt).toLocaleString() : '';
         render();
       })
@@ -167,22 +236,24 @@
     $('pblBody').addEventListener('keydown', onToggle);
     $('pblRefresh').addEventListener('click', function () { load(true); });
     $('pblSearch').addEventListener('input', function (e) { state.q = e.target.value; if (loaded) render(); });
-    $('pblStage').addEventListener('change', function (e) { state.stage = e.target.value; if (loaded) render(); });
-    $('pblPipeline').addEventListener('change', function (e) { state.pipeline = e.target.value; if (loaded) render(); });
-    $('pblRep').addEventListener('change', function (e) { state.rep = e.target.value; if (loaded) render(); });
-    $('pblJourney').addEventListener('change', function (e) { state.journey = e.target.value; if (loaded) render(); });
+    buildAllMsel(); MS.forEach(wireMsel);
+    document.addEventListener('click', function (e) { if (!e.target.closest('#pbleadsPanel .msel')) closeAllMsel(); });
+    // Close an open list when the page or table scrolls (it is fixed-positioned).
+    window.addEventListener('scroll', function (e) {
+      // Scrolling inside an open list must not close it.
+      if (e.target && e.target.closest && e.target.closest('.msel-pop')) return;
+      closeAllMsel();
+    }, true);
+    window.addEventListener('resize', function () { closeAllMsel(); });
     [['pblCreatedFrom', 'createdFrom'], ['pblCreatedTo', 'createdTo'], ['pblCloseFrom', 'closeFrom'], ['pblCloseTo', 'closeTo']].forEach(function (p) {
       $(p[0]).addEventListener('change', function (e) { state[p[1]] = e.target.value; if (loaded) render(); });
     });
     $('pblClearCols').addEventListener('click', function () {
-      ['pblPipeline', 'pblStage', 'pblJourney', 'pblRep', 'pblCreatedFrom', 'pblCreatedTo', 'pblCloseFrom', 'pblCloseTo'].forEach(function (id) { $(id).value = ''; });
-      state.pipeline = state.stage = state.journey = state.rep = '';
+      MS.forEach(function (m) { state[m.key] = []; });
+      ['pblCreatedFrom', 'pblCreatedTo', 'pblCloseFrom', 'pblCloseTo'].forEach(function (id) { $(id).value = ''; });
       state.createdFrom = state.createdTo = state.closeFrom = state.closeTo = '';
-      if (loaded) render();
+      buildAllMsel(); refreshSummaries(); if (loaded) render();
     });
-    $('pblForecast').addEventListener('change', function (e) { state.forecast = e.target.value; if (loaded) render(); });
-    $('pblYear').addEventListener('change', function (e) { state.year = e.target.value; if (loaded) render(); });
-    $('pblStatus').addEventListener('change', function (e) { state.status = e.target.value; if (loaded) render(); });
   }
   document.addEventListener('DOMContentLoaded', init);
   if (document.readyState !== 'loading') init();

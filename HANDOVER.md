@@ -367,3 +367,13 @@ Status, Forecast and search stay in the toolbar. The **Partner** column was remo
 **Update (2026-11-10): Peoplebox Leads limited to 2025–2026.** `PB_SCOPE` in
 `radar.js` is now `create_date >= '2025-01-01' AND < '2027-01-01'` (replaces the
 earlier "2025 onward, no end date"). Year filter reads "All years (2025–2026)".
+
+**Update (2026-11-10): Peoplebox Leads — stage exclusions + multi-select filters.**
+- `PB_SCOPE` also excludes deals whose `stage_label` is **Project Handover** or
+  **Contract Signed** (`PB_EXCLUDED_STAGES` in `radar.js`, case/space-insensitive).
+  Applies to both the leads and line-items queries.
+- Every dropdown filter is now a **multi-select** (tick boxes + Select all / Clear):
+  Year, Status, Forecast (toolbar) and Pipeline, Stage, Journey, Sales rep (column
+  headers). Nothing ticked = all. Lists are `position:fixed` (`placePop()` in
+  `pbleads.js`) so the scrolling table can't clip them; they close on outside click,
+  Esc, or page/table scroll. "Clear filters" resets every filter incl. the date ranges.
