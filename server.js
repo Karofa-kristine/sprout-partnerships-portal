@@ -115,6 +115,76 @@ app.get('/api/billing', auth.requireAuth, requireProduct('peoplebox'), async (re
   }
 });
 
+// Line items for one invoice (silver_ns_invoice + silver_ns_transaction_line).
+// Only invoice numbers already in the Peoplebox billing result are allowed, so
+// this can't be used to read arbitrary NetSuite invoices.
+app.get('/api/billing/lines', auth.requireAuth, requireProduct('peoplebox'), async (req, res) => {
+  try {
+    if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
+    const inv = String(req.query.invoice || '').trim();
+    if (!inv) return res.status(400).json({ error: 'missing_invoice', message: 'invoice is required' });
+
+    let billingRows = cache.get(BILLING_CACHE_KEY);
+    if (!billingRows) {
+      const data = await loadData({});
+      const ids = [...new Set((data.clients || []).map((c) => c.hsid).filter(Boolean))];
+      billingRows = await radar.billing(ids);
+      cache.set(BILLING_CACHE_KEY, billingRows, TTL);
+    }
+    if (!billingRows.some((r) => r.invoice_ref === inv)) {
+      return res.status(404).json({ error: 'unknown_invoice', message: 'Invoice is not in the Peoplebox billing report.' });
+    }
+
+    const key = 'radar-lines:' + inv;
+    const cached = cache.get(key);
+    if (cached) return res.json({ configured: true, cached: true, rows: cached });
+    const rows = await radar.invoiceLines(inv);
+    cache.set(key, rows, TTL);
+    res.json({ configured: true, cached: false, rows });
+  } catch (err) {
+    console.error('Failed to load invoice lines:', err);
+    res.status(502).json({ error: 'radar_failed', message: err.message });
+  }
+});
+
+// ── ChannelHub (Unified Channel Pipeline deals from RADAR) ─
+// Internal-only (product key 'channelhub', see src/access.js).
+const CH_CACHE_KEY = 'radar-channelhub';
+
+app.get('/api/channelhub', auth.requireAuth, requireProduct('channelhub'), async (req, res) => {
+  try {
+    if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
+    if (req.query.refresh !== '1') {
+      const cached = cache.get(CH_CACHE_KEY);
+      if (cached) return res.json({ configured: true, cached: true, rows: cached.rows, fetchedAt: cached.at });
+    }
+    const rows = await radar.channelDeals();
+    const at = new Date().toISOString();
+    cache.set(CH_CACHE_KEY, { rows, at }, TTL);
+    res.json({ configured: true, cached: false, rows, fetchedAt: at });
+  } catch (err) {
+    console.error('Failed to load ChannelHub:', err);
+    res.status(502).json({ error: 'radar_failed', message: err.message });
+  }
+});
+
+app.get('/api/channelhub/lines', auth.requireAuth, requireProduct('channelhub'), async (req, res) => {
+  try {
+    if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
+    const id = String(req.query.deal || '').trim();
+    if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'bad_deal', message: 'deal must be a numeric deal id' });
+    const key = 'radar-ch-lines:' + id;
+    const cached = cache.get(key);
+    if (cached) return res.json({ configured: true, cached: true, rows: cached });
+    const rows = await radar.channelDealLines(id);
+    cache.set(key, rows, TTL);
+    res.json({ configured: true, cached: false, rows });
+  } catch (err) {
+    console.error('Failed to load ChannelHub line items:', err);
+    res.status(502).json({ error: 'radar_failed', message: err.message });
+  }
+});
+
 // ── Raw sheet-tab dumps (Teamtailor, Disprz, Hubstaff) ───
 // Reads a whitelisted tab and returns all columns + rows generically, so the
 // portal reflects whatever the sheet holds (no fixed schema). The key must be

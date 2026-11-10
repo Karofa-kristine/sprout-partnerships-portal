@@ -57,6 +57,11 @@
         <div><div class="nm">Hubstaff</div><div class="desc">Time tracking &amp; workforce analytics</div></div>
         <span class="go">Open report →</span>
       </button>
+      <button class="ptile" data-goto="channelhub" style="--c:#C2841C">
+        <div class="ptile-logo"><span class="mono">CH</span></div>
+        <div><div class="nm">ChannelHub</div><div class="desc">Centralized platform for all channel partners and deals. Real-time visibility into partner activities and deal progress.</div></div>
+        <span class="go">Open report →</span>
+      </button>
     </div>
   </div>
 
@@ -154,9 +159,9 @@
       <div class="table-scroll">
         <table>
           <thead><tr>
-            <th>Client</th><th>Invoice #</th><th>Invoice date</th><th>Due date</th><th>Status</th><th>Collection</th><th class="r">Amount</th><th class="r">Paid</th><th class="r">Balance</th><th>Aging</th><th class="r">Days overdue</th><th>Memo</th>
+            <th>Client</th><th class="r">Invoices</th><th>Latest invoice</th><th class="r">Amount</th><th class="r">Paid</th><th class="r">Balance</th><th class="r">Overdue invoices</th><th class="r">Max days overdue</th>
           </tr></thead>
-          <tbody id="subsBody"><tr><td colspan="12"><div class="empty">Open this tab to load billing.</div></td></tr></tbody>
+          <tbody id="subsBody"><tr><td colspan="8"><div class="empty">Open this tab to load billing.</div></td></tr></tbody>
         </table>
       </div>
       <div class="tablefoot" id="subsFoot"></div>
@@ -167,6 +172,37 @@
   <div class="wrap tabpanel hide" id="disprzPanel" data-tab="disprz"></div>
   <div class="wrap tabpanel hide" id="hubstaffPanel" data-tab="hubstaff"></div>
 
+  <div class="wrap tabpanel hide" id="channelhubPanel" data-tab="channelhub">
+    <button class="backlink" data-goto="overview">← Back to Overview</button>
+    <div class="section-head"><h2>ChannelHub</h2><span class="note" id="chStamp"></span></div>
+    <p style="margin:-6px 2px 18px;color:var(--muted);font-size:12.5px;line-height:1.5;max-width:900px">Centralized platform for all channel partners and deals. Real-time visibility into partner activities and deal progress. Source: RADAR <code>shared.revops.silver_deals</code> (Unified Channel Pipeline) with <code>silver_company</code> and <code>silver_line_items</code>.</p>
+    <div class="toolbar">
+      <select class="flt" id="chRange" aria-label="Date range"><option value="ytd">Year to date</option><option value="all">All time</option></select>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="chSearch" type="text" placeholder="Search partner / deal / company / rep…" autocomplete="off"/>
+      </div>
+      <select class="flt" id="chStage" aria-label="Stage"><option value="">All stages</option></select>
+      <select class="flt" id="chRep" aria-label="Sales rep"><option value="">All sales reps</option></select>
+      <button class="btn" id="chRefresh">🔄 Refresh</button>
+    </div>
+    <div class="kpis ch-kpis" id="chKpis"></div>
+    <div class="section-head"><h2>Deal pipeline by stage</h2><span class="note">deal count · amount</span></div>
+    <div class="ch-stages" id="chStages"></div>
+    <div class="section-head"><h2>Partners</h2><span class="note">click a partner to see its deals</span></div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Partner on record</th><th class="r">Deals</th><th class="r">Open</th><th class="r">Open amount</th><th class="r">Won</th><th class="r">Won amount</th><th class="r">Won MRR</th><th class="r">Lost</th><th class="r">Win rate</th><th>Latest activity</th>
+          </tr></thead>
+          <tbody id="chBody"><tr><td colspan="10"><div class="empty">Open this tab to load ChannelHub.</div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="tablefoot" id="chFoot"></div>
+    </div>
+  </div>
+
   <footer id="footer"></footer>
   </div><!-- /content -->
   </div><!-- /shell -->
@@ -175,6 +211,7 @@
   <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 
   <script src="/app.js"></script>
+  <script src="/channelhub.js"></script>
   <script>
     // Navigation. All access is via the Overview tiles (data-goto="x"); the
     // top-bar "Overview" button returns home. Adding a report is a tile +
@@ -292,6 +329,123 @@
         bar.appendChild(clr);
       }
 
+      // ---- Drill-down: company → invoices → line items ----
+      var openCo = {}, openInv = {}, linesCache = {};
+      var chev = function(open){ return "<span class='bl-chev" + (open ? " open" : "") + "' aria-hidden='true'>&#9656;</span>"; };
+
+      function groupByCompany(rows){
+        var by = {}, order = [];
+        rows.forEach(function(r){
+          var k = r.hsid || r.client || '—';
+          if(!by[k]){ by[k] = { key:k, client:r.client||'—', invoices:[], amt:0, paid:0, bal:0, overdue:0, maxOd:0, latest:'' }; order.push(k); }
+          var g = by[k], od = num(r.days_overdue) || 0;
+          g.invoices.push(r);
+          g.amt += num(r.amount) || 0; g.paid += num(r.amount_paid) || 0; g.bal += num(r.balance) || 0;
+          if(od > 0 && (num(r.balance) || 0) > 0){ g.overdue++; if(od > g.maxOd) g.maxOd = od; }
+          if((r.invoice_date||'') > g.latest) g.latest = r.invoice_date || '';
+        });
+        // Biggest outstanding balance first, then name.
+        return order.map(function(k){ return by[k]; }).sort(function(a,b){ return (b.bal - a.bal) || a.client.localeCompare(b.client); });
+      }
+
+      function companyRowHtml(g){
+        var open = !!openCo[g.key];
+        var h = "<tr class='bl-co' data-co='" + esc(g.key) + "' tabindex='0' aria-expanded='" + open + "'>" +
+          "<td style='font-weight:600'>" + chev(open) + esc(g.client) + "</td>" +
+          "<td class='r num'>" + g.invoices.length + "</td>" +
+          "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(g.latest||'—') + "</td>" +
+          "<td class='r num'>" + money(g.amt) + "</td>" +
+          "<td class='r num'>" + money(g.paid) + "</td>" +
+          "<td class='r num' style='font-weight:600" + (g.bal > 0 ? ";color:#c23a3a" : "") + "'>" + money(g.bal) + "</td>" +
+          "<td class='r num'" + (g.overdue ? " style='color:#c23a3a;font-weight:600'" : "") + ">" + (g.overdue || '—') + "</td>" +
+          "<td class='r num'" + (g.maxOd ? " style='color:#c23a3a;font-weight:600'" : "") + ">" + (g.maxOd || '—') + "</td></tr>";
+        if(open) h += "<tr class='bl-nest'><td colspan='8'>" + invoiceTableHtml(g.invoices) + "</td></tr>";
+        return h;
+      }
+
+      function invoiceTableHtml(invs){
+        var h = "<table class='bl-sub'><thead><tr><th>Invoice #</th><th>Invoice date</th><th>Due date</th><th>Status</th><th>Collection</th>" +
+          "<th class='r'>Amount</th><th class='r'>Paid</th><th class='r'>Balance</th><th>Aging</th><th class='r'>Days overdue</th><th>Memo</th></tr></thead><tbody>";
+        invs.forEach(function(r){
+          var od = num(r.days_overdue) || 0, ref = r.invoice_ref || '', open = !!openInv[ref];
+          h += "<tr class='bl-inv' data-inv='" + esc(ref) + "' tabindex='0' aria-expanded='" + open + "'>" +
+            "<td class='num' style='font-size:12.5px;font-weight:600'>" + chev(open) + esc(ref||'—') + "</td>" +
+            "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(r.invoice_date||'—') + "</td>" +
+            "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(r.due_date||'—') + "</td>" +
+            "<td style='font-size:12.5px'>" + esc(r.invoice_status||'—') + "</td>" +
+            "<td><span style='font-weight:600;color:" + colColor(r.collection_status) + "'>" + esc(r.collection_status||'—') + "</span></td>" +
+            "<td class='r num'>" + money(r.amount) + "</td>" +
+            "<td class='r num'>" + money(r.amount_paid) + "</td>" +
+            "<td class='r num' style='font-weight:600'>" + money(r.balance) + "</td>" +
+            "<td style='font-size:12.5px'>" + esc(r.aging||'—') + "</td>" +
+            "<td class='r num'" + (od > 0 ? " style='color:#c23a3a;font-weight:600'" : "") + ">" + (od > 0 ? od : '—') + "</td>" +
+            "<td style='font-size:12.5px;color:var(--muted);max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + esc(r.memo||'') + "'>" + esc(r.memo||'—') + "</td></tr>";
+          if(open) h += "<tr class='bl-nest'><td colspan='11'>" + linesHtml(ref) + "</td></tr>";
+        });
+        return h + "</tbody></table>";
+      }
+
+      // Line-item columns: show familiar NetSuite fields when present (first
+      // matching name wins); otherwise fall back to every non-empty column.
+      var LINE_COLS = [
+        { label:'Line', keys:['linesequencenumber','line_sequence_number','line_number','linenumber'] },
+        { label:'Item', keys:['item_name','item_display_name','itemname','item_id_name','item','item_id'] },
+        { label:'Description', keys:['description','item_description','memo','line_memo'] },
+        { label:'Qty', keys:['quantity','qty'], num:true },
+        { label:'Rate', keys:['rate','unit_price','price'], money:true },
+        { label:'Amount', keys:['amount','net_amount','netamount','foreign_amount','foreignamount','line_amount'], money:true },
+        { label:'Tax', keys:['tax_amount','taxamount','tax_code','taxcode'] },
+      ];
+      function lineColumns(rows){
+        var cols = rows.length ? Object.keys(rows[0]) : [], lower = cols.map(function(c){ return c.toLowerCase(); });
+        var picked = [];
+        LINE_COLS.forEach(function(d){
+          for(var i=0;i<d.keys.length;i++){ var at = lower.indexOf(d.keys[i]); if(at >= 0){ picked.push({ label:d.label, key:cols[at], num:d.num, money:d.money }); break; } }
+        });
+        if(picked.length >= 3) return picked;
+        return cols.filter(function(c){ return rows.some(function(r){ return r[c] != null && r[c] !== ''; }); })
+          .map(function(c){ return { label:c, key:c }; });
+      }
+
+      function linesHtml(ref){
+        var st = linesCache[ref];
+        if(!st || st.loading) return "<div class='bl-lines-msg'>Loading line items…</div>";
+        if(st.error) return "<div class='bl-lines-msg' style='color:#c23a3a'><strong>Could not load line items.</strong> " + esc(st.error) + "</div>";
+        if(!st.rows.length) return "<div class='bl-lines-msg'>No line items found for this invoice.</div>";
+        var cols = lineColumns(st.rows);
+        return "<table class='bl-sub bl-lines'><thead><tr>" + cols.map(function(c){ return "<th" + (c.num||c.money ? " class='r'" : "") + ">" + esc(c.label) + "</th>"; }).join('') + "</tr></thead><tbody>" +
+          st.rows.map(function(r){
+            return "<tr>" + cols.map(function(c){
+              var v = r[c.key];
+              if(c.money) return "<td class='r num'>" + money(v) + "</td>";
+              if(c.num) return "<td class='r num'>" + (v == null || v === '' ? '—' : esc(v)) + "</td>";
+              return "<td style='font-size:12.5px'>" + esc(v == null || v === '' ? '—' : v) + "</td>";
+            }).join('') + "</tr>";
+          }).join('') + "</tbody></table>";
+      }
+
+      function loadLines(ref){
+        if(linesCache[ref] && !linesCache[ref].error) return;
+        linesCache[ref] = { loading:true };
+        fetch('/api/billing/lines?invoice=' + encodeURIComponent(ref), { credentials:'same-origin' })
+          .then(function(res){ if(!res.ok) return res.json().then(function(j){ throw new Error(j.message || ('HTTP '+res.status)); }); return res.json(); })
+          .then(function(d){ linesCache[ref] = { rows: d.rows || [] }; })
+          .catch(function(err){ linesCache[ref] = { error: err.message }; })
+          .then(function(){ if(openInv[ref]) renderSubs(); });
+      }
+
+      function onSubsToggle(e){
+        if(e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+        var inv = e.target.closest('tr.bl-inv'), co = e.target.closest('tr.bl-co');
+        if(!inv && !co) return;
+        if(e.type === 'keydown') e.preventDefault();
+        if(inv){ var ref = inv.getAttribute('data-inv'); openInv[ref] = !openInv[ref]; if(openInv[ref]) loadLines(ref); }
+        else { var k = co.getAttribute('data-co'); openCo[k] = !openCo[k]; }
+        renderSubs();
+      }
+      document.getElementById('subsBody').addEventListener('click', onSubsToggle);
+      document.getElementById('subsBody').addEventListener('keydown', onSubsToggle);
+
       function renderSubs(){
         var q = (document.getElementById('subsSearch').value || '').toLowerCase();
         var rows = subsData.filter(function(r){
@@ -304,40 +458,27 @@
         });
         var tb = document.getElementById('subsBody');
         if(!rows.length){
-          tb.innerHTML = "<tr><td colspan='12'><div class='empty'><strong>No matching invoices.</strong></div></td></tr>";
+          tb.innerHTML = "<tr><td colspan='8'><div class='empty'><strong>No matching invoices.</strong></div></td></tr>";
         } else {
-          tb.innerHTML = rows.map(function(r){
-            var od = num(r.days_overdue) || 0;
-            return "<tr><td style='font-weight:600'>" + esc(r.client||'—') + "</td>" +
-              "<td class='num' style='font-size:12.5px'>" + esc(r.invoice_ref||'—') + "</td>" +
-              "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(r.invoice_date||'—') + "</td>" +
-              "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(r.due_date||'—') + "</td>" +
-              "<td style='font-size:12.5px'>" + esc(r.invoice_status||'—') + "</td>" +
-              "<td><span style='font-weight:600;color:" + colColor(r.collection_status) + "'>" + esc(r.collection_status||'—') + "</span></td>" +
-              "<td class='r num'>" + money(r.amount) + "</td>" +
-              "<td class='r num'>" + money(r.amount_paid) + "</td>" +
-              "<td class='r num' style='font-weight:600'>" + money(r.balance) + "</td>" +
-              "<td style='font-size:12.5px'>" + esc(r.aging||'—') + "</td>" +
-              "<td class='r num'" + (od > 0 ? " style='color:#c23a3a;font-weight:600'" : "") + ">" + (od > 0 ? od : '—') + "</td>" +
-              "<td style='font-size:12.5px;color:var(--muted);max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' title='" + esc(r.memo||'') + "'>" + esc(r.memo||'—') + "</td></tr>";
-          }).join('');
+          tb.innerHTML = groupByCompany(rows).map(companyRowHtml).join('');
         }
         // Totals across the filtered rows.
         var tAmt = 0, tBal = 0; rows.forEach(function(r){ tAmt += num(r.amount) || 0; tBal += num(r.balance) || 0; });
-        document.getElementById('subsFoot').textContent = 'Showing ' + rows.length + ' of ' + subsData.length +
-          ' invoices · total ' + money(tAmt) + ' · outstanding balance ' + money(tBal);
+        var coCount = {}; rows.forEach(function(r){ coCount[r.hsid || r.client] = 1; });
+        document.getElementById('subsFoot').textContent = Object.keys(coCount).length + ' clients · ' + rows.length + ' of ' + subsData.length +
+          ' invoices · click a client to see invoices, then an invoice to see line items · total ' + money(tAmt) + ' · outstanding balance ' + money(tBal);
       }
 
       function loadSubs(force){
         if(subsLoaded && !force) return;
         var tb = document.getElementById('subsBody');
-        tb.innerHTML = "<tr><td colspan='12'><div class='empty'>Loading billing from RADAR…</div></td></tr>";
+        tb.innerHTML = "<tr><td colspan='8'><div class='empty'>Loading billing from RADAR…</div></td></tr>";
         fetch('/api/billing' + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
           .then(function(res){ if(!res.ok) return res.json().then(function(j){ throw new Error(j.message || ('HTTP '+res.status)); }); return res.json(); })
           .then(function(data){
             subsLoaded = true;
             if(!data.configured){
-              tb.innerHTML = "<tr><td colspan='12'><div class='empty'><strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server to enable this tab.</div></td></tr>";
+              tb.innerHTML = "<tr><td colspan='8'><div class='empty'><strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server to enable this tab.</div></td></tr>";
               document.getElementById('subsFoot').textContent = '';
               return;
             }
@@ -347,7 +488,7 @@
             renderSubs();
           })
           .catch(function(err){
-            tb.innerHTML = "<tr><td colspan='12'><div class='empty' style='color:#c23a3a'><strong>Could not load billing.</strong>" + esc(err.message) + "</div></td></tr>";
+            tb.innerHTML = "<tr><td colspan='8'><div class='empty' style='color:#c23a3a'><strong>Could not load billing.</strong>" + esc(err.message) + "</div></td></tr>";
           });
       }
 
@@ -513,6 +654,7 @@
         teamtailor: makeProductReport('teamtailor', 'Teamtailor'),
         disprz: makeProductReport('disprz', 'Disprz'),
         hubstaff: makeProductReport('hubstaff', 'Hubstaff'),
+        channelhub: window.ChannelHub,
       };
     })();
   </script>

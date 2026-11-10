@@ -24,8 +24,12 @@ function domainOf(email) {
   return ((email || '').split('@')[1] || '').toLowerCase();
 }
 
+// Reports only internal Sprout accounts may open (they span every partner,
+// so no partner domain should ever see them).
+const INTERNAL_ONLY = ['channelhub'];
+
 function allowedProductsForDomain(domain) {
-  if (internalDomains().includes(domain)) return Object.keys(PRODUCT_DOMAINS);
+  if (internalDomains().includes(domain)) return Object.keys(PRODUCT_DOMAINS).concat(INTERNAL_ONLY);
   return Object.keys(PRODUCT_DOMAINS).filter((k) => PRODUCT_DOMAINS[k] === domain);
 }
 

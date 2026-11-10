@@ -122,6 +122,20 @@ tracker's Peoplebox clients by `hubspot_company_id`. Returns ~930 invoices with
 amount / paid / balance / collection status / aging / days overdue. Same RADAR
 world as the separate "Client Payment Monitoring" dashboard.
 
+**Drill-down (added 2026-11-10, not yet verified against live RADAR):** the Billing
+tab now lists **clients first** (invoice count, latest invoice, amount / paid /
+balance, overdue invoices, max days overdue; sorted by balance). Clicking a client
+expands its invoices (from gold_billing_360); clicking an invoice loads its **line
+items** via `GET /api/billing/lines?invoice=<number>` → `radar.invoiceLines()`, which
+joins **`shared.revops.silver_ns_transaction_line`** to **`shared.revops.silver_ns_invoice`**
+on the invoice number and drops mainline/tax lines. The silver column names weren't
+known when this was written, so `invoiceLines()` runs `DESCRIBE TABLE` once per server
+instance and picks join columns from candidate lists (`CAND` in `radar.js`). If no
+match is found, the line-item panel shows an error listing the actual columns — add
+the right name to `CAND` and redeploy. The endpoint only serves invoice numbers that
+are already in the Peoplebox billing result. The UI shows Line / Item / Description /
+Qty / Rate / Amount / Tax when those columns exist, otherwise every non-empty column.
+
 **Validated 2026-11-10** against the prior source (`netsuite_invoices_summary`) for
 the same Peoplebox clients: identical **930 invoices**, **100% invoice-number overlap**
 (0 only-in-either), **all 930 amounts match exactly**, and **totals are identical
@@ -283,3 +297,27 @@ enhancements, cleanups, verifications, and ongoing maintenance.
    `vercel --prod --yes`. Then hard-refresh the live site (Ctrl+Shift+R).
 
 Deploy/env detail lives in `VERCEL.md`. Original build notes in `README.md`/`DEPLOY.md`.
+
+---
+
+## ChannelHub tab (added 2026-11-10, not yet verified against live RADAR)
+
+Overview tile **ChannelHub** → `#channelhubPanel`, UI in `public/channelhub.js`.
+**Internal-only**: product key `channelhub` is granted to `INTERNAL_DOMAINS` accounts
+only (`INTERNAL_ONLY` in `src/access.js`); partner domains never see it.
+
+Data (RADAR, per the RevOps table spec — only documented columns are used):
+- `GET /api/channelhub` → `radar.channelDeals()`: `shared.revops.silver_deals` where
+  `pipeline_name = 'Unified Channel Pipeline'`, LEFT JOIN `silver_company` on
+  `Company_id = company_id` for the company name. Cached for `CACHE_TTL_SECONDS`;
+  `?refresh=1` (the 🔄 Refresh button) bypasses the cache.
+- `GET /api/channelhub/lines?deal=<deal_id>` → `radar.channelDealLines()`:
+  `silver_line_items` for that deal (numeric id only; must be in the channel pipeline).
+
+UI: date range **Year to date** (default) / **All time**; search, stage and sales-rep
+filters. KPIs: active channel partners, deals created (create_date basis), open
+pipeline (current MQL + Opportunity snapshot, not date-filtered), deals won and won
+MRR (close_date basis; won = `client_journey_stage = 'Customer'`), win rate (won vs
+Closed Lost). "Deal pipeline by stage" bars, then a **partner table** (grouped by
+`partner_on_record`; blank → "(No partner on record)") → click a partner for its
+deals → click a deal for its line items. YTD scope = deal created OR closed this year.

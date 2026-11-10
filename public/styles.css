@@ -264,3 +264,38 @@ footer{max-width:1280px;margin:0 auto;padding:0 28px 40px;color:var(--faint);fon
   .user .nm,.user .em{display:none;}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
+
+/* Billing & AR drill-down (company → invoices → line items) */
+#subsPanel tr.bl-co,#subsPanel tr.bl-inv{cursor:pointer;}
+#subsPanel tr.bl-co:hover td,#subsPanel tr.bl-inv:hover td{background:var(--surface-2);}
+#subsPanel tr.bl-co[aria-expanded="true"] td{background:var(--brand-soft);}
+.bl-chev{display:inline-block;width:14px;margin-right:6px;color:var(--muted);transition:transform .15s;}
+.bl-chev.open{transform:rotate(90deg);color:var(--accent);}
+#subsPanel tr.bl-nest>td{padding:0 0 0 28px;background:var(--surface-2);border-bottom:1px solid var(--border);}
+#subsPanel table.bl-sub{min-width:0;margin:6px 0 12px;border-left:2px solid var(--accent);}
+#subsPanel table.bl-sub thead th{background:transparent;padding:8px 12px;}
+#subsPanel table.bl-sub td{padding:7px 12px;}
+#subsPanel table.bl-lines{border-left-color:var(--border-strong);}
+.bl-lines-msg{padding:10px 12px;font-size:12.5px;color:var(--muted);}
+
+/* ChannelHub */
+.ch-kpis{grid-template-columns:repeat(3,1fr);}
+.ch-stages{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:10px 16px;margin-bottom:28px;box-shadow:var(--shadow);}
+.ch-stage{display:grid;grid-template-columns:minmax(160px,260px) 1fr 50px 130px;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.ch-stage:last-child{border-bottom:0;}
+.ch-stage-l{font-weight:600;display:flex;align-items:center;gap:8px;min-width:0;}
+.ch-stage-l small{color:var(--muted);font-weight:500;font-size:11px;}
+.ch-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.ch-bar{height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden;}
+.ch-bar span{display:block;height:100%;border-radius:999px;}
+.ch-stage-n,.ch-stage-a{text-align:right;}
+.ch-stage-a{color:var(--muted);}
+#channelhubPanel tr.ch-p,#channelhubPanel tr.ch-d{cursor:pointer;}
+#channelhubPanel tr.ch-p:hover td,#channelhubPanel tr.ch-d:hover td{background:var(--surface-2);}
+#channelhubPanel tr.ch-p[aria-expanded="true"] td{background:var(--brand-soft);}
+#channelhubPanel tr.bl-nest>td{padding:0 0 0 28px;background:var(--surface-2);border-bottom:1px solid var(--border);}
+#channelhubPanel table.bl-sub{min-width:0;margin:6px 0 12px;border-left:2px solid var(--accent);width:100%;}
+#channelhubPanel table.bl-sub thead th{background:transparent;padding:8px 12px;}
+#channelhubPanel table.bl-sub td{padding:7px 12px;}
+#channelhubPanel table.bl-lines{border-left-color:var(--border-strong);}
+@media (max-width:900px){.ch-kpis{grid-template-columns:repeat(2,1fr);}.ch-stage{grid-template-columns:1fr 60px 40px;}.ch-stage-a{display:none;}}
