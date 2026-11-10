@@ -1,5 +1,5 @@
-/* Peoplebox Leads — ALL HubSpot deals created from 2025-01-01 onward (no end
- * date; any stage: MQL | Opportunity | Customer | Closed Lost) across all
+/* Peoplebox Leads — ALL HubSpot deals created in 2025–2026 (2025-01-01 ..
+ * 2026-12-31; any stage: MQL | Opportunity | Customer | Closed Lost) across all
  * pipelines that carry a Peoplebox line item ("Peoplebox", "Perform Pro",
  * "Sprout Perform Pro"). Data: GET /api/peoplebox/leads (RADAR silver_deals +
  * silver_company + silver_line_items). Internal-only (product key 'pbleads').
@@ -64,7 +64,7 @@
     var opp = list.filter(function (r) { return r.journey === 'Opportunity'; }).length;
     var won = list.filter(isWon), lost = list.filter(isLost);
     var wsum = function (a, k) { return a.reduce(function (t, r) { return t + num(r[k]); }, 0); };
-    var period = state.year ? 'created in ' + state.year : 'created since 2025';
+    var period = state.year ? 'created in ' + state.year : 'created 2025–2026';
     var closed = won.length + lost.length;
     $('pblKpis').innerHTML =
       kpi(list.length, 'Peoplebox leads', period + ' · with a Peoplebox / Perform Pro line item', 'var(--accent)') +
@@ -114,7 +114,7 @@
       if (open) h += "<tr class='bl-nest'><td colspan='13'>" + linesHtml(id) + '</td></tr>';
       return h;
     }).join('') : "<tr><td colspan='13'><div class='empty'><strong>No Peoplebox leads match.</strong></div></td></tr>";
-    $('pblFoot').textContent = list.length + ' of ' + rows.length + ' Peoplebox leads (created 2025 onward) · click a lead to see its Peoplebox line items';
+    $('pblFoot').textContent = list.length + ' of ' + rows.length + ' Peoplebox leads (created 2025–2026) · click a lead to see its Peoplebox line items';
   }
 
   function fill(id, label, key, cur) {
@@ -145,7 +145,7 @@
         fill('pblJourney', 'All', 'journey', state.journey);
         fill('pblForecast', 'All forecast categories', 'forecast_category', state.forecast);
         var years = {}; rows.forEach(function (r) { var y = yearOf(r); if (y) years[y] = 1; });
-        $('pblYear').innerHTML = '<option value="">All years (2025 onward)</option>' + Object.keys(years).sort().reverse().map(function (y) { return '<option' + (y === state.year ? ' selected' : '') + '>' + y + '</option>'; }).join('');
+        $('pblYear').innerHTML = '<option value="">All years (2025–2026)</option>' + Object.keys(years).sort().reverse().map(function (y) { return '<option' + (y === state.year ? ' selected' : '') + '>' + y + '</option>'; }).join('');
         $('pblStamp').textContent = d.fetchedAt ? 'RADAR data as of ' + new Date(d.fetchedAt).toLocaleString() : '';
         render();
       })

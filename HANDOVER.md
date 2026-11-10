@@ -363,3 +363,7 @@ Projected close date (from/to date pickers). "Clear column filters" resets them.
 Status, Forecast and search stay in the toolbar. The **Partner** column was removed.
 "Projected close date" shows `projected_close_date`, or the actual `close_date`
 (tagged "closed") when a closed lead has no projected date; its filter uses that value.
+
+**Update (2026-11-10): Peoplebox Leads limited to 2025–2026.** `PB_SCOPE` in
+`radar.js` is now `create_date >= '2025-01-01' AND < '2027-01-01'` (replaces the
+earlier "2025 onward, no end date"). Year filter reads "All years (2025–2026)".

@@ -276,9 +276,9 @@ async function channelDealLines(dealId) {
   return runStatement(sql);
 }
 
-// ── Peoplebox leads (all pipelines, created 2025 onward) ────────────────────
+// ── Peoplebox leads (all pipelines, created 2025–2026) ──────────────────────
 // ALL deals (any client_journey_stage: MQL | Opportunity | Customer | Closed
-// Lost) in silver_deals created on/after 2025-01-01 (no end date) that have
+// Lost) in silver_deals created 2025-01-01 .. 2026-12-31 that have
 // at least one Peoplebox line item in silver_line_items: product_name /
 // parent_product containing "Peoplebox" or "Perform Pro" (covers "Sprout
 // Perform Pro", "Perform Pro" and "Peoplebox"). Columns per the RADAR spec only.
@@ -286,8 +286,8 @@ const PB_LINE_MATCH = `(LOWER(COALESCE(li.product_name,''))   LIKE '%peoplebox%'
       OR LOWER(COALESCE(li.parent_product,'')) LIKE '%peoplebox%'
       OR LOWER(COALESCE(li.product_name,''))   LIKE '%perform pro%'
       OR LOWER(COALESCE(li.parent_product,'')) LIKE '%perform pro%')`;
-// From 2025-01-01 onward, no end date (future years are included automatically).
-const PB_SCOPE = `d.create_date >= TIMESTAMP '2025-01-01'`;
+// Leads created in 2025 or 2026 only (create_date, PH time).
+const PB_SCOPE = `d.create_date >= TIMESTAMP '2025-01-01' AND d.create_date < TIMESTAMP '2027-01-01'`;
 
 async function peopleboxLeads() {
   const dealsSql = `
