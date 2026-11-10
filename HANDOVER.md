@@ -346,3 +346,13 @@ Card **"Peoplebox Ongoing Leads"** inside the Peoplebox tab → `#pbleadsPanel`,
   lead row is clicked).
 UI: search (deal / deal ID / company / rep / product), pipeline, stage and rep filters,
 🔄 Refresh, KPIs (ongoing leads, MQL, Opportunity, Peoplebox line-item value + MRR).
+
+**Update (2026-11-10): renamed to "Peoplebox Leads", now ALL leads from 2025 onward.**
+`peopleboxLeads()` no longer limits to open deals: it returns every deal with a
+Peoplebox / Perform Pro line item created on/after **2025-01-01 with no end date**
+(`PB_SCOPE` in `radar.js`), any `client_journey_stage`. Also returns `close_date`.
+UI adds a **Year** filter (built from the data, so new years appear automatically)
+and a **Status** filter (Ongoing = MQL + Opportunity / Won = Customer / Lost = Closed
+Lost). KPIs: Peoplebox leads, Ongoing, Won (+ Peoplebox value, win rate), Lost,
+Peoplebox line-item value + MRR, Forecast: Commit (ongoing leads). "Close date"
+column shows the actual close date, or the projected one marked "proj.".

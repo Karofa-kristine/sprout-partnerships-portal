@@ -276,8 +276,9 @@ async function channelDealLines(dealId) {
   return runStatement(sql);
 }
 
-// ── Peoplebox ongoing leads (all pipelines) ───────────────────────────────
-// Open deals (client_journey_stage MQL | Opportunity) in silver_deals that have
+// ── Peoplebox leads (all pipelines, created 2025 onward) ────────────────────
+// ALL deals (any client_journey_stage: MQL | Opportunity | Customer | Closed
+// Lost) in silver_deals created on/after 2025-01-01 (no end date) that have
 // at least one Peoplebox line item in silver_line_items: product_name /
 // parent_product containing "Peoplebox" or "Perform Pro" (covers "Sprout
 // Perform Pro", "Perform Pro" and "Peoplebox"). Columns per the RADAR spec only.
@@ -285,7 +286,8 @@ const PB_LINE_MATCH = `(LOWER(COALESCE(li.product_name,''))   LIKE '%peoplebox%'
       OR LOWER(COALESCE(li.parent_product,'')) LIKE '%peoplebox%'
       OR LOWER(COALESCE(li.product_name,''))   LIKE '%perform pro%'
       OR LOWER(COALESCE(li.parent_product,'')) LIKE '%perform pro%')`;
-const PB_OPEN = `d.client_journey_stage IN ('MQL', 'Opportunity')`;
+// From 2025-01-01 onward, no end date (future years are included automatically).
+const PB_SCOPE = `d.create_date >= TIMESTAMP '2025-01-01'`;
 
 async function peopleboxLeads() {
   const dealsSql = `
@@ -307,6 +309,7 @@ async function peopleboxLeads() {
       d.client_journey_stage                    journey,
       CAST(d.create_date AS STRING)             create_date,
       CAST(d.projected_close_date AS STRING)    projected_close_date,
+      CAST(d.close_date AS STRING)              close_date,
       CAST(d.amount AS DOUBLE)                  amount,
       d.mrr                                     mrr,
       pb.pb_amount                              pb_amount,
@@ -321,7 +324,7 @@ async function peopleboxLeads() {
     FROM shared.revops.silver_deals d
     JOIN pb ON pb.deal_id = d.deal_id
     LEFT JOIN shared.revops.silver_company c ON c.Company_id = d.company_id
-    WHERE ${PB_OPEN}
+    WHERE ${PB_SCOPE}
     ORDER BY d.create_date DESC
     LIMIT 5000`;
   const linesSql = `
@@ -332,7 +335,7 @@ async function peopleboxLeads() {
       li.unit_price, li.discount, li.amount, li.mrr, li.contract_term_months
     FROM shared.revops.silver_line_items li
     JOIN shared.revops.silver_deals d ON d.deal_id = li.deal_id
-    WHERE ${PB_LINE_MATCH} AND ${PB_OPEN}
+    WHERE ${PB_LINE_MATCH} AND ${PB_SCOPE}
     ORDER BY li.deal_id, li.amount DESC
     LIMIT 20000`;
   const [deals, lines] = await Promise.all([runStatement(dealsSql), runStatement(linesSql)]);

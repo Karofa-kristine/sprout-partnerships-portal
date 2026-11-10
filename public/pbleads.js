@@ -1,4 +1,5 @@
-/* Peoplebox Ongoing Leads — open HubSpot deals (MQL | Opportunity) across all
+/* Peoplebox Leads — ALL HubSpot deals created from 2025-01-01 onward (no end
+ * date; any stage: MQL | Opportunity | Customer | Closed Lost) across all
  * pipelines that carry a Peoplebox line item ("Peoplebox", "Perform Pro",
  * "Sprout Perform Pro"). Data: GET /api/peoplebox/leads (RADAR silver_deals +
  * silver_company + silver_line_items). Internal-only (product key 'pbleads').
@@ -6,7 +7,7 @@
 (function () {
   'use strict';
   var rows = [], linesBy = {}, loaded = false, loading = false;
-  var state = { q: '', stage: '', pipeline: '', rep: '' };
+  var state = { q: '', stage: '', pipeline: '', rep: '', forecast: '', year: '', status: '' };
   var openD = {};
 
   var $ = function (id) { return document.getElementById(id); };
@@ -18,7 +19,15 @@
   var W = 'white-space:normal;overflow-wrap:break-word;vertical-align:top;line-height:1.4;';
   var TXT = W + 'min-width:110px;max-width:280px;font-size:12.5px;';
   var NAME = W + 'min-width:220px;max-width:340px;font-weight:600;';
-  var JC = { MQL: '#7C8CF8', Opportunity: '#C2841C' };
+  var JC = { MQL: '#7C8CF8', Opportunity: '#C2841C', Customer: '#17872F', 'Closed Lost': '#c23a3a' };
+  var isOngoing = function (r) { return r.journey === 'MQL' || r.journey === 'Opportunity'; };
+  var isWon = function (r) { return r.journey === 'Customer'; };
+  var isLost = function (r) { return r.journey === 'Closed Lost'; };
+  var yearOf = function (r) { return String(r.create_date || '').slice(0, 4); };
+  // Forecast category colours (Commit > Best Case > Pipeline > Omitted).
+  var fcColor = function (f) { f = String(f || '').toLowerCase();
+    if (/commit/.test(f)) return '#17872F'; if (/best/.test(f)) return '#C2841C';
+    if (/omit/.test(f)) return 'var(--muted)'; if (f) return '#7C8CF8'; return 'var(--muted)'; };
   var chev = function (open) { return "<span class='bl-chev" + (open ? ' open' : '') + "' aria-hidden='true'>&#9656;</span>"; };
 
   function scoped() {
@@ -27,8 +36,13 @@
       if (state.stage && r.stage !== state.stage) return false;
       if (state.pipeline && r.pipeline !== state.pipeline) return false;
       if (state.rep && r.sales_rep !== state.rep) return false;
+      if (state.forecast && (r.forecast_category || '') !== state.forecast) return false;
+      if (state.year && yearOf(r) !== state.year) return false;
+      if (state.status === 'ongoing' && !isOngoing(r)) return false;
+      if (state.status === 'won' && !isWon(r)) return false;
+      if (state.status === 'lost' && !isLost(r)) return false;
       if (!q) return true;
-      return [r.deal_name, r.deal_id, r.company, r.sales_rep, r.partner, r.products, r.stage].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
+      return [r.deal_name, r.deal_id, r.company, r.sales_rep, r.partner, r.products, r.stage, r.forecast_category].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
     });
   }
 
@@ -40,11 +54,18 @@
     var sum = function (k) { return list.reduce(function (t, r) { return t + num(r[k]); }, 0); };
     var mql = list.filter(function (r) { return r.journey === 'MQL'; }).length;
     var opp = list.filter(function (r) { return r.journey === 'Opportunity'; }).length;
+    var won = list.filter(isWon), lost = list.filter(isLost);
+    var wsum = function (a, k) { return a.reduce(function (t, r) { return t + num(r[k]); }, 0); };
+    var period = state.year ? 'created in ' + state.year : 'created since 2025';
+    var closed = won.length + lost.length;
     $('pblKpis').innerHTML =
-      kpi(list.length, 'Ongoing Peoplebox leads', 'open deals with a Peoplebox / Perform Pro line item', 'var(--accent)') +
-      kpi(mql, 'MQL', 'early-stage leads', JC.MQL) +
-      kpi(opp, 'Opportunity', 'in active sales stages', JC.Opportunity) +
-      kpi('₱' + money(sum('pb_amount')), 'Peoplebox line-item value', 'sum of Peoplebox line amounts · MRR ₱' + money(sum('pb_mrr')), 'var(--brand)');
+      kpi(list.length, 'Peoplebox leads', period + ' · with a Peoplebox / Perform Pro line item', 'var(--accent)') +
+      kpi(mql + opp, 'Ongoing', mql + ' MQL · ' + opp + ' Opportunity', JC.Opportunity) +
+      kpi(won.length, 'Won', '₱' + money(wsum(won, 'pb_amount')) + ' Peoplebox value · ' + (closed ? Math.round(won.length / closed * 100) + '% win rate' : 'no closed leads'), JC.Customer) +
+      kpi(lost.length, 'Lost', 'Closed Lost · ' + period, JC['Closed Lost']) +
+      kpi('₱' + money(sum('pb_amount')), 'Peoplebox line-item value', 'sum of Peoplebox line amounts · MRR ₱' + money(sum('pb_mrr')), 'var(--brand)') +
+      kpi(list.filter(function (r) { return isOngoing(r) && /commit/i.test(r.forecast_category || ''); }).length, 'Forecast: Commit',
+        'ongoing leads · ' + list.filter(function (r) { return isOngoing(r) && /best/i.test(r.forecast_category || ''); }).length + ' Best Case', '#17872F');
   }
 
   function linesHtml(id) {
@@ -75,17 +96,18 @@
         "<td style='" + TXT + "'>" + esc(r.pipeline || '—') + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.stage || '—') + '</td>' +
         "<td style='white-space:nowrap'><span style='font-weight:600;color:" + (JC[r.journey] || 'var(--muted)') + "'>" + esc(r.journey || '—') + '</span></td>' +
+        "<td style='white-space:nowrap;font-size:12.5px;font-weight:600;color:" + fcColor(r.forecast_category) + "'>" + esc(r.forecast_category || '—') + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.sales_rep || '—') + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.partner || '—') + '</td>' +
         "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + day(r.create_date) + '</td>' +
-        "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + day(r.projected_close_date) + '</td>' +
+        "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + day(r.close_date || r.projected_close_date) + (!r.close_date && r.projected_close_date ? " <small style='color:var(--faint)'>proj.</small>" : '') + '</td>' +
         "<td class='r num' style='white-space:nowrap'>" + money2(r.pb_amount) + '</td>' +
         "<td class='r num' style='white-space:nowrap'>" + money2(r.pb_mrr) + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.products || '—') + '</td></tr>';
-      if (open) h += "<tr class='bl-nest'><td colspan='13'>" + linesHtml(id) + '</td></tr>';
+      if (open) h += "<tr class='bl-nest'><td colspan='14'>" + linesHtml(id) + '</td></tr>';
       return h;
-    }).join('') : "<tr><td colspan='13'><div class='empty'><strong>No ongoing Peoplebox leads match.</strong></div></td></tr>";
-    $('pblFoot').textContent = list.length + ' of ' + rows.length + ' ongoing Peoplebox leads · click a lead to see its Peoplebox line items';
+    }).join('') : "<tr><td colspan='14'><div class='empty'><strong>No Peoplebox leads match.</strong></div></td></tr>";
+    $('pblFoot').textContent = list.length + ' of ' + rows.length + ' Peoplebox leads (created 2025 onward) · click a lead to see its Peoplebox line items';
   }
 
   function fill(id, label, key, cur) {
@@ -95,12 +117,12 @@
     $(id).innerHTML = '<option value="">' + label + '</option>' + vals.map(function (v) { return '<option' + (v === cur ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
   }
 
-  function msg(html, err) { $('pblBody').innerHTML = "<tr><td colspan='13'><div class='empty'" + (err ? " style='color:#c23a3a'" : '') + '>' + html + '</div></td></tr>'; }
+  function msg(html, err) { $('pblBody').innerHTML = "<tr><td colspan='14'><div class='empty'" + (err ? " style='color:#c23a3a'" : '') + '>' + html + '</div></td></tr>'; }
 
   function load(force) {
     if ((loaded && !force) || loading) return;
     loading = true; $('pblRefresh').disabled = true; $('pblKpis').innerHTML = '';
-    msg("<div class='sp' style='margin:0 auto 10px'></div>Loading ongoing Peoplebox leads from RADAR…");
+    msg("<div class='sp' style='margin:0 auto 10px'></div>Loading Peoplebox leads from RADAR…");
     fetch('/api/peoplebox/leads' + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
       .then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error(j.message || ('HTTP ' + r.status)); }); return r.json(); })
       .then(function (d) {
@@ -111,6 +133,9 @@
         fill('pblStage', 'All stages', 'stage', state.stage);
         fill('pblPipeline', 'All pipelines', 'pipeline', state.pipeline);
         fill('pblRep', 'All sales reps', 'sales_rep', state.rep);
+        fill('pblForecast', 'All forecast categories', 'forecast_category', state.forecast);
+        var years = {}; rows.forEach(function (r) { var y = yearOf(r); if (y) years[y] = 1; });
+        $('pblYear').innerHTML = '<option value="">All years (2025 onward)</option>' + Object.keys(years).sort().reverse().map(function (y) { return '<option' + (y === state.year ? ' selected' : '') + '>' + y + '</option>'; }).join('');
         $('pblStamp').textContent = d.fetchedAt ? 'RADAR data as of ' + new Date(d.fetchedAt).toLocaleString() : '';
         render();
       })
@@ -135,6 +160,9 @@
     $('pblStage').addEventListener('change', function (e) { state.stage = e.target.value; if (loaded) render(); });
     $('pblPipeline').addEventListener('change', function (e) { state.pipeline = e.target.value; if (loaded) render(); });
     $('pblRep').addEventListener('change', function (e) { state.rep = e.target.value; if (loaded) render(); });
+    $('pblForecast').addEventListener('change', function (e) { state.forecast = e.target.value; if (loaded) render(); });
+    $('pblYear').addEventListener('change', function (e) { state.year = e.target.value; if (loaded) render(); });
+    $('pblStatus').addEventListener('change', function (e) { state.status = e.target.value; if (loaded) render(); });
   }
   document.addEventListener('DOMContentLoaded', init);
   if (document.readyState !== 'loading') init();
