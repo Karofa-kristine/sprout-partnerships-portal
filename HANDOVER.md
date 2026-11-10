@@ -356,3 +356,10 @@ and a **Status** filter (Ongoing = MQL + Opportunity / Won = Customer / Lost = C
 Lost). KPIs: Peoplebox leads, Ongoing, Won (+ Peoplebox value, win rate), Lost,
 Peoplebox line-item value + MRR, Forecast: Commit (ongoing leads). "Close date"
 column shows the actual close date, or the projected one marked "proj.".
+
+**Update (2026-11-10): Peoplebox Leads column filters.** Filters now sit in a row
+under the table headers: Pipeline, Stage, Journey, Sales rep (dropdowns) and Created,
+Projected close date (from/to date pickers). "Clear column filters" resets them. Year,
+Status, Forecast and search stay in the toolbar. The **Partner** column was removed.
+"Projected close date" shows `projected_close_date`, or the actual `close_date`
+(tagged "closed") when a closed lead has no projected date; its filter uses that value.

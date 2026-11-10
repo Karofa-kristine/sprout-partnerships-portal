@@ -7,7 +7,12 @@
 (function () {
   'use strict';
   var rows = [], linesBy = {}, loaded = false, loading = false;
-  var state = { q: '', stage: '', pipeline: '', rep: '', forecast: '', year: '', status: '' };
+  var state = { q: '', stage: '', pipeline: '', rep: '', journey: '', forecast: '', year: '', status: '',
+    createdFrom: '', createdTo: '', closeFrom: '', closeTo: '' };
+  // Date shown/filtered in the "Projected close date" column: the projected
+  // close date, or the actual close date for closed leads that have none.
+  var closeDay = function (r) { return String(r.projected_close_date || r.close_date || '').slice(0, 10); };
+  var inRange = function (d, from, to) { if (!from && !to) return true; if (!d) return false; return (!from || d >= from) && (!to || d <= to); };
   var openD = {};
 
   var $ = function (id) { return document.getElementById(id); };
@@ -36,13 +41,16 @@
       if (state.stage && r.stage !== state.stage) return false;
       if (state.pipeline && r.pipeline !== state.pipeline) return false;
       if (state.rep && r.sales_rep !== state.rep) return false;
+      if (state.journey && r.journey !== state.journey) return false;
+      if (!inRange(String(r.create_date || '').slice(0, 10), state.createdFrom, state.createdTo)) return false;
+      if (!inRange(closeDay(r), state.closeFrom, state.closeTo)) return false;
       if (state.forecast && (r.forecast_category || '') !== state.forecast) return false;
       if (state.year && yearOf(r) !== state.year) return false;
       if (state.status === 'ongoing' && !isOngoing(r)) return false;
       if (state.status === 'won' && !isWon(r)) return false;
       if (state.status === 'lost' && !isLost(r)) return false;
       if (!q) return true;
-      return [r.deal_name, r.deal_id, r.company, r.sales_rep, r.partner, r.products, r.stage, r.forecast_category].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
+      return [r.deal_name, r.deal_id, r.company, r.sales_rep, r.products, r.stage, r.forecast_category].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
     });
   }
 
@@ -98,26 +106,27 @@
         "<td style='white-space:nowrap'><span style='font-weight:600;color:" + (JC[r.journey] || 'var(--muted)') + "'>" + esc(r.journey || '—') + '</span></td>' +
         "<td style='white-space:nowrap;font-size:12.5px;font-weight:600;color:" + fcColor(r.forecast_category) + "'>" + esc(r.forecast_category || '—') + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.sales_rep || '—') + '</td>' +
-        "<td style='" + TXT + "'>" + esc(r.partner || '—') + '</td>' +
         "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + day(r.create_date) + '</td>' +
-        "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + day(r.close_date || r.projected_close_date) + (!r.close_date && r.projected_close_date ? " <small style='color:var(--faint)'>proj.</small>" : '') + '</td>' +
+        "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + (closeDay(r) || '—') + (!r.projected_close_date && r.close_date ? " <small style='color:var(--faint)'>closed</small>" : '') + '</td>' +
         "<td class='r num' style='white-space:nowrap'>" + money2(r.pb_amount) + '</td>' +
         "<td class='r num' style='white-space:nowrap'>" + money2(r.pb_mrr) + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.products || '—') + '</td></tr>';
-      if (open) h += "<tr class='bl-nest'><td colspan='14'>" + linesHtml(id) + '</td></tr>';
+      if (open) h += "<tr class='bl-nest'><td colspan='13'>" + linesHtml(id) + '</td></tr>';
       return h;
-    }).join('') : "<tr><td colspan='14'><div class='empty'><strong>No Peoplebox leads match.</strong></div></td></tr>";
+    }).join('') : "<tr><td colspan='13'><div class='empty'><strong>No Peoplebox leads match.</strong></div></td></tr>";
     $('pblFoot').textContent = list.length + ' of ' + rows.length + ' Peoplebox leads (created 2025 onward) · click a lead to see its Peoplebox line items';
   }
 
   function fill(id, label, key, cur) {
+    // label is ignored for column-header filters (they read "All").
+    if ($(id) && $(id).classList.contains('cflt')) label = 'All';
     var seen = {}, vals = [];
     rows.forEach(function (r) { var v = r[key]; if (v && !seen[v]) { seen[v] = 1; vals.push(v); } });
     vals.sort();
     $(id).innerHTML = '<option value="">' + label + '</option>' + vals.map(function (v) { return '<option' + (v === cur ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
   }
 
-  function msg(html, err) { $('pblBody').innerHTML = "<tr><td colspan='14'><div class='empty'" + (err ? " style='color:#c23a3a'" : '') + '>' + html + '</div></td></tr>'; }
+  function msg(html, err) { $('pblBody').innerHTML = "<tr><td colspan='13'><div class='empty'" + (err ? " style='color:#c23a3a'" : '') + '>' + html + '</div></td></tr>'; }
 
   function load(force) {
     if ((loaded && !force) || loading) return;
@@ -133,6 +142,7 @@
         fill('pblStage', 'All stages', 'stage', state.stage);
         fill('pblPipeline', 'All pipelines', 'pipeline', state.pipeline);
         fill('pblRep', 'All sales reps', 'sales_rep', state.rep);
+        fill('pblJourney', 'All', 'journey', state.journey);
         fill('pblForecast', 'All forecast categories', 'forecast_category', state.forecast);
         var years = {}; rows.forEach(function (r) { var y = yearOf(r); if (y) years[y] = 1; });
         $('pblYear').innerHTML = '<option value="">All years (2025 onward)</option>' + Object.keys(years).sort().reverse().map(function (y) { return '<option' + (y === state.year ? ' selected' : '') + '>' + y + '</option>'; }).join('');
@@ -160,6 +170,16 @@
     $('pblStage').addEventListener('change', function (e) { state.stage = e.target.value; if (loaded) render(); });
     $('pblPipeline').addEventListener('change', function (e) { state.pipeline = e.target.value; if (loaded) render(); });
     $('pblRep').addEventListener('change', function (e) { state.rep = e.target.value; if (loaded) render(); });
+    $('pblJourney').addEventListener('change', function (e) { state.journey = e.target.value; if (loaded) render(); });
+    [['pblCreatedFrom', 'createdFrom'], ['pblCreatedTo', 'createdTo'], ['pblCloseFrom', 'closeFrom'], ['pblCloseTo', 'closeTo']].forEach(function (p) {
+      $(p[0]).addEventListener('change', function (e) { state[p[1]] = e.target.value; if (loaded) render(); });
+    });
+    $('pblClearCols').addEventListener('click', function () {
+      ['pblPipeline', 'pblStage', 'pblJourney', 'pblRep', 'pblCreatedFrom', 'pblCreatedTo', 'pblCloseFrom', 'pblCloseTo'].forEach(function (id) { $(id).value = ''; });
+      state.pipeline = state.stage = state.journey = state.rep = '';
+      state.createdFrom = state.createdTo = state.closeFrom = state.closeTo = '';
+      if (loaded) render();
+    });
     $('pblForecast').addEventListener('change', function (e) { state.forecast = e.target.value; if (loaded) render(); });
     $('pblYear').addEventListener('change', function (e) { state.year = e.target.value; if (loaded) render(); });
     $('pblStatus').addEventListener('change', function (e) { state.status = e.target.value; if (loaded) render(); });

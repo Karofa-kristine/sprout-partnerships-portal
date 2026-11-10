@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Sprout Partnerships Portal</title>
   <link rel="icon" href="/sprout-leaf.png"/>
-  <link rel="stylesheet" href="/styles.css?v=20261110g"/>
+  <link rel="stylesheet" href="/styles.css?v=20261110h"/>
 </head>
 <body>
   <div class="topbar">
@@ -195,12 +195,10 @@
       <select class="flt" id="pblStatus" aria-label="Lead status"><option value="">All statuses</option><option value="ongoing">Ongoing (MQL + Opportunity)</option><option value="won">Won</option><option value="lost">Lost</option></select>
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="pblSearch" type="text" placeholder="Search deal / deal ID / company / rep / product / forecast…" autocomplete="off"/>
+        <input id="pblSearch" type="text" placeholder="Search deal / deal ID / company / rep / product…" autocomplete="off"/>
       </div>
-      <select class="flt" id="pblPipeline" aria-label="Pipeline"><option value="">All pipelines</option></select>
-      <select class="flt" id="pblStage" aria-label="Stage"><option value="">All stages</option></select>
-      <select class="flt" id="pblRep" aria-label="Sales rep"><option value="">All sales reps</option></select>
       <select class="flt" id="pblForecast" aria-label="Forecast category"><option value="">All forecast categories</option></select>
+      <button class="btn" id="pblClearCols" title="Clear the column filters">Clear column filters</button>
       <button class="btn" id="pblRefresh">🔄 Refresh</button>
     </div>
     <div class="kpis" id="pblKpis"></div>
@@ -208,9 +206,20 @@
       <div class="table-scroll">
         <table>
           <thead><tr>
-            <th>Deal</th><th>Deal ID</th><th>Company</th><th>Pipeline</th><th>Stage</th><th>Journey</th><th>Forecast</th><th>Sales rep</th><th>Partner</th><th>Created</th><th>Close date</th><th class="r">Peoplebox amount</th><th class="r">Peoplebox MRR</th><th>Peoplebox products</th>
+            <th>Deal</th><th>Deal ID</th><th>Company</th><th>Pipeline</th><th>Stage</th><th>Journey</th><th>Forecast</th><th>Sales rep</th><th>Created</th><th>Projected close date</th><th class="r">Peoplebox amount</th><th class="r">Peoplebox MRR</th><th>Peoplebox products</th>
+          </tr>
+          <tr class="pbl-frow">
+            <th></th><th></th><th></th>
+            <th><select class="cflt" id="pblPipeline" aria-label="Filter pipeline"><option value="">All</option></select></th>
+            <th><select class="cflt" id="pblStage" aria-label="Filter stage"><option value="">All</option></select></th>
+            <th><select class="cflt" id="pblJourney" aria-label="Filter journey"><option value="">All</option></select></th>
+            <th></th>
+            <th><select class="cflt" id="pblRep" aria-label="Filter sales rep"><option value="">All</option></select></th>
+            <th><div class="cdate"><input type="date" id="pblCreatedFrom" aria-label="Created from" title="Created from"/><input type="date" id="pblCreatedTo" aria-label="Created to" title="Created to"/></div></th>
+            <th><div class="cdate"><input type="date" id="pblCloseFrom" aria-label="Projected close from" title="Projected close from"/><input type="date" id="pblCloseTo" aria-label="Projected close to" title="Projected close to"/></div></th>
+            <th></th><th></th><th></th>
           </tr></thead>
-          <tbody id="pblBody"><tr><td colspan="14"><div class="empty">Open this report to load leads.</div></td></tr></tbody>
+          <tbody id="pblBody"><tr><td colspan="13"><div class="empty">Open this report to load leads.</div></td></tr></tbody>
         </table>
       </div>
       <div class="tablefoot" id="pblFoot"></div>
@@ -255,9 +264,9 @@
   <div class="overlay" id="overlay"></div>
   <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 
-  <script src="/app.js?v=20261110g"></script>
-  <script src="/channelhub.js?v=20261110g"></script>
-  <script src="/pbleads.js?v=20261110g"></script>
+  <script src="/app.js?v=20261110h"></script>
+  <script src="/channelhub.js?v=20261110h"></script>
+  <script src="/pbleads.js?v=20261110h"></script>
   <script>
     // Navigation. All access is via the Overview tiles (data-goto="x"); the
     // top-bar "Overview" button returns home. Adding a report is a tile +
