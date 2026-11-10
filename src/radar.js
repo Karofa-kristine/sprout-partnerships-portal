@@ -14,8 +14,7 @@
  */
 
 const PROXY = process.env.RADAR_PROXY_URL || 'https://radar-revops.vercel.app';
-const SUMMARY = 'shared.revops.netsuite_invoices_summary';
-const LINES = 'shared.revops.netsuite_invoice_lineitems';
+const BILLING = 'shared.revops.gold_billing_360';
 
 function isConfigured() {
   return !!(process.env.RADAR_DB_HOST && process.env.RADAR_DB_TOKEN && process.env.RADAR_WAREHOUSE_ID);
@@ -73,31 +72,36 @@ async function runStatement(sql) {
 }
 
 /**
- * NetSuite invoice line items for a set of HubSpot Company IDs, restricted to
- * lines whose remarks (line_description) mention "Peoplebox".
- * Returns [{ client, hsid, item_display, invoice_ref, invoice_status, recurring_sub }].
- * (recurring_sub = line_description, i.e. the Peoplebox remarks.)
+ * Invoice-level billing / AR for a set of HubSpot Company IDs, from the
+ * gold_billing_360 view (all invoices for those clients, any product).
+ * Returns [{ client, hsid, invoice_ref, invoice_date, due_date, invoice_status,
+ *   collection_status, amount, amount_paid, balance, aging, days_overdue,
+ *   currency }]. (Numbers come back as strings from JSON_ARRAY.)
  */
-async function subscriptions(hubspotIds) {
+async function billing(hubspotIds) {
   const ids = [...new Set((hubspotIds || []).filter(Boolean))];
   if (!ids.length) return [];
   const inList = ids.map(sqlStr).join(',');
   const sql = `
     SELECT
-      COALESCE(NULLIF(s.hubspot_company_name,''), s.customer_name) client,
-      s.hubspot_company_id hsid,
-      l.item_display_name item_display,
-      s.invoice_number invoice_ref,
-      s.invoice_status invoice_status,
-      l.line_description recurring_sub
-    FROM ${LINES} l
-    JOIN ${SUMMARY} s ON l.invoice_id = s.invoice_id
-    WHERE s.hubspot_company_id IN (${inList})
-      AND l.line_description ILIKE '%peoplebox%'
-      AND (s.invoice_status IS NULL OR LOWER(TRIM(s.invoice_status)) NOT LIKE '%cancel%')
-    ORDER BY client, s.invoice_number
+      customer_name            client,
+      hubspot_company_id       hsid,
+      invoice_number           invoice_ref,
+      CAST(invoice_date AS STRING) invoice_date,
+      CAST(due_date AS STRING)     due_date,
+      invoice_status           invoice_status,
+      collection_status        collection_status,
+      invoice_amount           amount,
+      netsuite_amount_paid     amount_paid,
+      remaining_balance        balance,
+      aging_bucket             aging,
+      days_overdue             days_overdue,
+      currency                 currency
+    FROM ${BILLING}
+    WHERE hubspot_company_id IN (${inList})
+    ORDER BY invoice_date DESC, client
     LIMIT 5000`;
   return runStatement(sql);
 }
 
-module.exports = { isConfigured, subscriptions };
+module.exports = { isConfigured, billing };

@@ -68,7 +68,7 @@
       <span class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
       </span>
-      <span class="txt"><b>Peoplebox Subscriptions</b><small>Invoice line items from RADAR, matched by HubSpot Company ID</small></span>
+      <span class="txt"><b>Peoplebox Billing</b><small>Invoice billing &amp; AR from RADAR, matched by HubSpot Company ID</small></span>
       <span class="arr">→</span>
     </button>
 
@@ -139,11 +139,11 @@
 
   <div class="wrap tabpanel hide" id="subsPanel" data-tab="subs">
     <button class="backlink" data-goto="peoplebox">← Back to Peoplebox</button>
-    <div class="section-head"><h2>Peoplebox invoice line items</h2><span class="note" id="subsNote">from RADAR · NetSuite invoice line items · matched by HubSpot Company ID</span></div>
+    <div class="section-head"><h2>Peoplebox billing &amp; AR</h2><span class="note" id="subsNote">from RADAR · all invoices for Peoplebox clients · matched by HubSpot Company ID</span></div>
     <div class="toolbar">
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="subsSearch" type="text" placeholder="Search client / invoice / item…" autocomplete="off"/>
+        <input id="subsSearch" type="text" placeholder="Search client / invoice…" autocomplete="off"/>
       </div>
       <button class="btn" id="subsRefresh">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
@@ -154,9 +154,9 @@
       <div class="table-scroll">
         <table>
           <thead><tr>
-            <th>Client</th><th>Item Display</th><th>Invoice Reference</th><th>Invoice Status</th><th>Recurring Subscription (Peoplebox remarks)</th>
+            <th>Client</th><th>Invoice #</th><th>Invoice date</th><th>Due date</th><th>Status</th><th>Collection</th><th class="r">Amount</th><th class="r">Paid</th><th class="r">Balance</th><th>Aging</th><th class="r">Days overdue</th>
           </tr></thead>
-          <tbody id="subsBody"><tr><td colspan="5"><div class="empty">Open this tab to load subscriptions.</div></td></tr></tbody>
+          <tbody id="subsBody"><tr><td colspan="11"><div class="empty">Open this tab to load billing.</div></td></tr></tbody>
         </table>
       </div>
       <div class="tablefoot" id="subsFoot"></div>
@@ -252,10 +252,17 @@
           if(!IS_INTERNAL && ACCESS.length === 1) activateTab(ACCESS[0]);
         });
 
-      // ---- Peoplebox Subscriptions (RADAR) ----
-      var subsLoaded = false, subsData = [], subsFilters = { client:'', status:'' };
+      // ---- Peoplebox Billing & AR (RADAR / gold_billing_360) ----
+      var subsLoaded = false, subsData = [], subsFilters = { client:'', status:'', aging:'' };
       var esc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); };
-      var stColor = function(s){ s=String(s||'').toLowerCase(); return s==='paid'?'#17872F':s==='overdue'?'#c23a3a':s==='open'?'#C2841C':'var(--muted)'; };
+      var num = function(v){ var n = parseFloat(v); return isNaN(n) ? null : n; };
+      var money = function(v){ var n = num(v); return n == null ? '—' : n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+      // Collection-status colour: paid=green, unpaid/overdue=red, partial=amber.
+      var colColor = function(s){ s = String(s||'').toLowerCase();
+        if(/paid|closed/.test(s) && !/unpaid|partial/.test(s)) return '#17872F';
+        if(/partial/.test(s)) return '#C2841C';
+        if(/unpaid|overdue/.test(s)) return '#c23a3a';
+        return 'var(--muted)'; };
 
       function buildSubsFilters(){
         var panel = document.getElementById('subsPanel');
@@ -263,74 +270,74 @@
         if(!bar){ bar = document.createElement('div'); bar.className = 'filterbar'; bar.id = 'subsFilters'; panel.insertBefore(bar, panel.querySelector('.table-wrap')); }
         bar.innerHTML = '';
         function addSel(label, dataKey, filterKey){
-          var seen = {}, o = []; subsData.forEach(function(r){ var v = (r[dataKey]||'').trim(); if(v && !seen[v]){ seen[v] = 1; o.push(v); } }); o.sort();
+          var seen = {}, o = []; subsData.forEach(function(r){ var v = (r[dataKey]||'').toString().trim(); if(v && !seen[v]){ seen[v] = 1; o.push(v); } }); o.sort();
           var sel = document.createElement('select'); sel.className = 'flt';
           sel.innerHTML = '<option value="">' + label + '</option>' + o.map(function(v){ return '<option>' + esc(v) + '</option>'; }).join('');
           sel.addEventListener('change', function(){ subsFilters[filterKey] = sel.value; renderSubs(); });
           bar.appendChild(sel);
         }
         addSel('All clients', 'client', 'client');
-        addSel('All invoice status', 'invoice_status', 'status');
+        addSel('All collection status', 'collection_status', 'status');
+        addSel('All aging', 'aging', 'aging');
         var clr = document.createElement('button'); clr.className = 'btn'; clr.textContent = 'Clear';
-        clr.addEventListener('click', function(){ subsFilters = { client:'', status:'' }; bar.querySelectorAll('select').forEach(function(s){ s.value = ''; }); renderSubs(); });
+        clr.addEventListener('click', function(){ subsFilters = { client:'', status:'', aging:'' }; bar.querySelectorAll('select').forEach(function(s){ s.value = ''; }); renderSubs(); });
         bar.appendChild(clr);
       }
 
-      // For Paynamics, drop the "HR and Payroll" wording from the recurring
-      // subscription remarks and tidy up any leftover separators/spacing.
-      function subDesc(r){
-        var v = String(r.recurring_sub||'');
-        if(/paynamics/i.test(String(r.client||''))){
-          v = v.replace(/HR\s*(?:and|&)\s*Payroll/ig, '');
-          v = v.replace(/\s{2,}/g,' ').replace(/^[\s\-–—|,]+|[\s\-–—|,]+$/g,'').trim();
-        }
-        return v || '—';
-      }
       function renderSubs(){
         var q = (document.getElementById('subsSearch').value || '').toLowerCase();
         var rows = subsData.filter(function(r){
           if(subsFilters.client && (r.client||'') !== subsFilters.client) return false;
-          if(subsFilters.status && (r.invoice_status||'') !== subsFilters.status) return false;
+          if(subsFilters.status && (r.collection_status||'') !== subsFilters.status) return false;
+          if(subsFilters.aging && (r.aging||'') !== subsFilters.aging) return false;
           if(!q) return true;
-          return [r.client, r.item_display, r.invoice_ref, r.invoice_status, r.recurring_sub].some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; });
+          return [r.client, r.invoice_ref, r.invoice_status, r.collection_status].some(function(v){ return String(v||'').toLowerCase().indexOf(q) >= 0; });
         });
         var tb = document.getElementById('subsBody');
         if(!rows.length){
-          tb.innerHTML = "<tr><td colspan='5'><div class='empty'><strong>No matching subscriptions.</strong></div></td></tr>";
+          tb.innerHTML = "<tr><td colspan='11'><div class='empty'><strong>No matching invoices.</strong></div></td></tr>";
         } else {
           tb.innerHTML = rows.map(function(r){
+            var od = num(r.days_overdue) || 0;
             return "<tr><td style='font-weight:600'>" + esc(r.client||'—') + "</td>" +
-              "<td>" + esc(r.item_display||'—') + "</td>" +
               "<td class='num' style='font-size:12.5px'>" + esc(r.invoice_ref||'—') + "</td>" +
-              "<td><span style='font-weight:600;color:" + stColor(r.invoice_status) + "'>" + esc(r.invoice_status||'—') + "</span></td>" +
-              "<td>" + esc(subDesc(r)) + "</td></tr>";
+              "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(r.invoice_date||'—') + "</td>" +
+              "<td class='num' style='font-size:12.5px;color:var(--muted)'>" + esc(r.due_date||'—') + "</td>" +
+              "<td style='font-size:12.5px'>" + esc(r.invoice_status||'—') + "</td>" +
+              "<td><span style='font-weight:600;color:" + colColor(r.collection_status) + "'>" + esc(r.collection_status||'—') + "</span></td>" +
+              "<td class='r num'>" + money(r.amount) + "</td>" +
+              "<td class='r num'>" + money(r.amount_paid) + "</td>" +
+              "<td class='r num' style='font-weight:600'>" + money(r.balance) + "</td>" +
+              "<td style='font-size:12.5px'>" + esc(r.aging||'—') + "</td>" +
+              "<td class='r num'" + (od > 0 ? " style='color:#c23a3a;font-weight:600'" : "") + ">" + (od > 0 ? od : '—') + "</td></tr>";
           }).join('');
         }
-        document.getElementById('subsFoot').textContent = 'Showing ' + rows.length + ' of ' + subsData.length + ' subscription line items.';
+        // Totals across the filtered rows.
+        var tAmt = 0, tBal = 0; rows.forEach(function(r){ tAmt += num(r.amount) || 0; tBal += num(r.balance) || 0; });
+        document.getElementById('subsFoot').textContent = 'Showing ' + rows.length + ' of ' + subsData.length +
+          ' invoices · total ' + money(tAmt) + ' · outstanding balance ' + money(tBal);
       }
 
       function loadSubs(force){
         if(subsLoaded && !force) return;
         var tb = document.getElementById('subsBody');
-        tb.innerHTML = "<tr><td colspan='5'><div class='empty'>Loading subscriptions from RADAR…</div></td></tr>";
-        fetch('/api/subscriptions' + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
+        tb.innerHTML = "<tr><td colspan='11'><div class='empty'>Loading billing from RADAR…</div></td></tr>";
+        fetch('/api/billing' + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
           .then(function(res){ if(!res.ok) return res.json().then(function(j){ throw new Error(j.message || ('HTTP '+res.status)); }); return res.json(); })
           .then(function(data){
             subsLoaded = true;
             if(!data.configured){
-              tb.innerHTML = "<tr><td colspan='5'><div class='empty'><strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server to enable this tab.</div></td></tr>";
+              tb.innerHTML = "<tr><td colspan='11'><div class='empty'><strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server to enable this tab.</div></td></tr>";
               document.getElementById('subsFoot').textContent = '';
               return;
             }
-            // Belt-and-suspenders: drop any cancelled invoices client-side too,
-            // so they never show even if the server returned a cached result.
-            subsData = (data.rows || []).filter(function(r){ return !/cancel/i.test(String(r.invoice_status||'')); });
-            document.getElementById('subsNote').textContent = 'from RADAR · ' + subsData.length + ' invoice line items across ' + (data.clientCount||0) + ' clients (matched by HubSpot Company ID)';
+            subsData = data.rows || [];
+            document.getElementById('subsNote').textContent = 'from RADAR · ' + subsData.length + ' invoices across ' + (data.clientCount||0) + ' Peoplebox clients (matched by HubSpot Company ID)';
             buildSubsFilters();
             renderSubs();
           })
           .catch(function(err){
-            tb.innerHTML = "<tr><td colspan='5'><div class='empty' style='color:#c23a3a'><strong>Could not load subscriptions.</strong>" + esc(err.message) + "</div></td></tr>";
+            tb.innerHTML = "<tr><td colspan='11'><div class='empty' style='color:#c23a3a'><strong>Could not load billing.</strong>" + esc(err.message) + "</div></td></tr>";
           });
       }
 

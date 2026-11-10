@@ -89,27 +89,28 @@ app.get('/api/data', auth.requireAuth, requireProduct('peoplebox'), async (req, 
   }
 });
 
-// ── Peoplebox subscriptions from RADAR (Databricks) ──────
-// Joins RADAR invoice line items to the tracker's clients by HubSpot Company ID.
-const SUBS_CACHE_KEY = 'radar-subscriptions';
+// ── Peoplebox billing / AR from RADAR (Databricks) ───────
+// All invoices (gold_billing_360) for the tracker's Peoplebox clients,
+// matched by HubSpot Company ID.
+const BILLING_CACHE_KEY = 'radar-billing';
 
-app.get('/api/subscriptions', auth.requireAuth, requireProduct('peoplebox'), async (req, res) => {
+app.get('/api/billing', auth.requireAuth, requireProduct('peoplebox'), async (req, res) => {
   try {
     if (!radar.isConfigured()) {
       return res.json({ configured: false, rows: [] });
     }
     const force = req.query.refresh === '1';
     if (!force) {
-      const cached = cache.get(SUBS_CACHE_KEY);
+      const cached = cache.get(BILLING_CACHE_KEY);
       if (cached) return res.json({ configured: true, cached: true, rows: cached });
     }
     const data = await loadData({});
     const ids = [...new Set((data.clients || []).map((c) => c.hsid).filter(Boolean))];
-    const rows = await radar.subscriptions(ids);
-    cache.set(SUBS_CACHE_KEY, rows, TTL);
+    const rows = await radar.billing(ids);
+    cache.set(BILLING_CACHE_KEY, rows, TTL);
     res.json({ configured: true, cached: false, clientCount: ids.length, rows });
   } catch (err) {
-    console.error('Failed to load RADAR subscriptions:', err);
+    console.error('Failed to load RADAR billing:', err);
     res.status(502).json({ error: 'radar_failed', message: err.message });
   }
 });
