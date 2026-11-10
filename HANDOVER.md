@@ -321,3 +321,9 @@ MRR (close_date basis; won = `client_journey_stage = 'Customer'`), win rate (won
 Closed Lost). "Deal pipeline by stage" bars, then a **partner table** (grouped by
 `partner_on_record`; blank → "(No partner on record)") → click a partner for its
 deals → click a deal for its line items. YTD scope = deal created OR closed this year.
+
+**ChannelHub update (2026-11-10):** limited to **leads created 2025–2026** —
+`channelDeals()` filters `create_date >= '2025-01-01' AND < '2027-01-01'` (`CH_FROM`/
+`CH_TO` in `radar.js`). The YTD/All-time toggle was replaced by a **lead created year**
+switch (2025–2026 / 2026 / 2025); every KPI is for the leads created in that period
+(cohort view, create_date basis). Partner table column "Deals" → **"Leads"**.

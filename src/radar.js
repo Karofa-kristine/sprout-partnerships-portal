@@ -217,9 +217,12 @@ async function invoiceLines(invoiceNumber) {
 //   shared.revops.silver_deals       1 row per deal (deal_id PK, company_id FK)
 //   shared.revops.silver_company     1 row per company (Company_id PK)
 //   shared.revops.silver_line_items  1 row per line item (deal_id FK)
-// Only deals in pipeline_name = 'Unified Channel Pipeline'. All-time rows are
-// returned; the UI applies the YTD / All-time toggle client-side.
+// Only leads (deals) in pipeline_name = 'Unified Channel Pipeline' that were
+// CREATED in 2025–2026 (create_date, PH time). The UI's year toggle
+// (2025–2026 / 2025 / 2026) narrows further client-side.
 const CH_PIPELINE = 'Unified Channel Pipeline';
+const CH_FROM = '2025-01-01';
+const CH_TO = '2027-01-01'; // exclusive
 
 async function channelDeals() {
   const sql = `
@@ -249,6 +252,8 @@ async function channelDeals() {
     FROM shared.revops.silver_deals d
     LEFT JOIN shared.revops.silver_company c ON c.Company_id = d.company_id
     WHERE d.pipeline_name = ${sqlStr(CH_PIPELINE)}
+      AND d.create_date >= TIMESTAMP ${sqlStr(CH_FROM)}
+      AND d.create_date <  TIMESTAMP ${sqlStr(CH_TO)}
     ORDER BY d.create_date DESC
     LIMIT 20000`;
   return runStatement(sql);

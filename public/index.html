@@ -182,9 +182,9 @@
   <div class="wrap tabpanel hide" id="channelhubPanel" data-tab="channelhub">
     <button class="backlink" data-goto="overview">← Back to Overview</button>
     <div class="section-head"><h2>ChannelHub</h2><span class="note" id="chStamp"></span></div>
-    <p style="margin:-6px 2px 18px;color:var(--muted);font-size:12.5px;line-height:1.5;max-width:900px">Centralized platform for all channel partners and deals. Real-time visibility into partner activities and deal progress. Source: RADAR <code>shared.revops.silver_deals</code> (Unified Channel Pipeline) with <code>silver_company</code> and <code>silver_line_items</code>.</p>
+    <p style="margin:-6px 2px 18px;color:var(--muted);font-size:12.5px;line-height:1.5;max-width:900px">Centralized platform for all channel partners and deals. Real-time visibility into partner activities and deal progress. Source: RADAR <code>shared.revops.silver_deals</code> (Unified Channel Pipeline, leads created 2025–2026) with <code>silver_company</code> and <code>silver_line_items</code>.</p>
     <div class="toolbar">
-      <select class="flt" id="chRange" aria-label="Date range"><option value="ytd">Year to date</option><option value="all">All time</option></select>
+      <select class="flt" id="chRange" aria-label="Lead created year"><option value="all">2025–2026</option><option value="2026">2026</option><option value="2025">2025</option></select>
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
         <input id="chSearch" type="text" placeholder="Search partner / deal / company / rep…" autocomplete="off"/>
@@ -194,14 +194,14 @@
       <button class="btn" id="chRefresh">🔄 Refresh</button>
     </div>
     <div class="kpis ch-kpis" id="chKpis"></div>
-    <div class="section-head"><h2>Deal pipeline by stage</h2><span class="note">deal count · amount</span></div>
+    <div class="section-head"><h2>Lead pipeline by stage</h2><span class="note">lead count · amount</span></div>
     <div class="ch-stages" id="chStages"></div>
-    <div class="section-head"><h2>Partners</h2><span class="note">click a partner to see its deals</span></div>
+    <div class="section-head"><h2>Partners</h2><span class="note">leads per partner · click a partner to see its leads</span></div>
     <div class="table-wrap">
       <div class="table-scroll">
         <table>
           <thead><tr>
-            <th>Partner on record</th><th class="r">Deals</th><th class="r">Open</th><th class="r">Open amount</th><th class="r">Won</th><th class="r">Won amount</th><th class="r">Won MRR</th><th class="r">Lost</th><th class="r">Win rate</th><th>Latest activity</th>
+            <th>Partner on record</th><th class="r">Leads</th><th class="r">Open</th><th class="r">Open amount</th><th class="r">Won</th><th class="r">Won amount</th><th class="r">Won MRR</th><th class="r">Lost</th><th class="r">Win rate</th><th>Latest activity</th>
           </tr></thead>
           <tbody id="chBody"><tr><td colspan="10"><div class="empty">Open this tab to load ChannelHub.</div></td></tr></tbody>
         </table>

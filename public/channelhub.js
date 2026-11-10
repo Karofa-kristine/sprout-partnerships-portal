@@ -1,15 +1,15 @@
 /* ChannelHub — Unified Channel Pipeline deals from RADAR (shared.revops).
  * Data: GET /api/channelhub (silver_deals ⨝ silver_company, pipeline =
  * 'Unified Channel Pipeline'), line items: GET /api/channelhub/lines?deal=<id>
- * (silver_line_items). Date basis follows the RADAR spec: created/QL metrics
- * use create_date, Won/Lost/MRR use close_date. Open pipeline is a current
- * snapshot (client_journey_stage MQL | Opportunity), not date-filtered.
+ * (silver_line_items). Only leads CREATED in 2025–2026 are loaded (server-side
+ * filter on create_date); the year toggle (2025–2026 / 2025 / 2026) narrows by
+ * create_date, so every KPI is for the leads created in that period (cohort view).
  */
 (function () {
   'use strict';
   var NO_PARTNER = '(No partner on record)';
   var rows = [], loaded = false, loading = false, fetchedAt = '';
-  var state = { range: 'ytd', q: '', stage: '', rep: '' };
+  var state = { range: 'all', q: '', stage: '', rep: '' };
   var openP = {}, openD = {}, linesCache = {};
 
   var $ = function (id) { return document.getElementById(id); };
@@ -18,19 +18,19 @@
   var money = function (v) { return num(v).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }); };
   var money2 = function (v) { return v == null || v === '' ? '—' : num(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
   var day = function (ts) { return ts ? String(ts).slice(0, 10) : '—'; };
-  var ytdStart = function () { return new Date().getFullYear() + '-01-01'; };
   var isOpen = function (r) { return r.journey === 'MQL' || r.journey === 'Opportunity'; };
   var isWon = function (r) { return r.journey === 'Customer'; };
   var isLost = function (r) { return r.journey === 'Closed Lost'; };
-  var inYtd = function (ts) { return !!ts && String(ts) >= ytdStart(); };
+  var inRange = function (r) { return state.range === 'all' || String(r.create_date || '').slice(0, 4) === state.range; };
+  var rangeLabel = function () { return state.range === 'all' ? '2025–2026' : state.range; };
   var chev = function (open) { return "<span class='bl-chev" + (open ? ' open' : '') + "' aria-hidden='true'>&#9656;</span>"; };
   var JOURNEY_COLOR = { MQL: '#7C8CF8', Opportunity: '#C2841C', Customer: '#17872F', 'Closed Lost': '#c23a3a' };
 
-  // Deals that count for the selected range: YTD = created OR closed this year.
+  // Leads that count for the selected period (by create_date).
   function scoped() {
     var q = state.q.toLowerCase();
     return rows.filter(function (r) {
-      if (state.range === 'ytd' && !inYtd(r.create_date) && !inYtd(r.close_date)) return false;
+      if (!inRange(r)) return false;
       if (state.stage && r.stage !== state.stage) return false;
       if (state.rep && r.sales_rep !== state.rep) return false;
       if (!q) return true;
@@ -43,20 +43,19 @@
   }
 
   function renderKpis(list) {
-    var ytd = state.range === 'ytd';
-    var created = list.filter(function (r) { return !ytd || inYtd(r.create_date); });
-    var won = list.filter(function (r) { return isWon(r) && (!ytd || inYtd(r.close_date)); });
-    var lost = list.filter(function (r) { return isLost(r) && (!ytd || inYtd(r.close_date)); });
+    var won = list.filter(isWon);
+    var lost = list.filter(isLost);
+    var qualified = list.filter(function (r) { return r.qualified_lead === 'Yes'; });
     var open = list.filter(isOpen);
     var partners = {}; list.forEach(function (r) { if (r.partner) partners[r.partner] = 1; });
     var sum = function (a, k) { return a.reduce(function (t, r) { return t + num(r[k]); }, 0); };
     var winRate = won.length + lost.length ? Math.round(won.length / (won.length + lost.length) * 100) + '%' : '—';
-    var lbl = ytd ? 'YTD' : 'all time';
+    var lbl = 'leads created ' + rangeLabel();
     $('chKpis').innerHTML =
-      kpiCard(Object.keys(partners).length, 'Active channel partners', 'partners with deals ' + lbl, 'var(--accent)') +
-      kpiCard(created.length, 'Deals created', 'create_date basis · ' + lbl, '#7C8CF8') +
-      kpiCard(open.length, 'Open pipeline', '₱' + money(sum(open, 'amount')) + ' · current MQL + Opportunity', '#C2841C') +
-      kpiCard(won.length, 'Deals won', '₱' + money(sum(won, 'amount')) + ' · close_date basis · ' + lbl, '#17872F') +
+      kpiCard(Object.keys(partners).length, 'Active channel partners', 'partners with ' + lbl, 'var(--accent)') +
+      kpiCard(list.length, 'Leads', qualified.length + ' qualified · ' + lbl, '#7C8CF8') +
+      kpiCard(open.length, 'Open pipeline', '₱' + money(sum(open, 'amount')) + ' · still MQL / Opportunity', '#C2841C') +
+      kpiCard(won.length, 'Leads won', '₱' + money(sum(won, 'amount')) + ' · ' + lbl, '#17872F') +
       kpiCard('₱' + money(sum(won, 'mrr')), 'Won MRR', 'rev-share MRR ₱' + money(sum(won, 'revshare_mrr')) + ' · ' + lbl, 'var(--brand)') +
       kpiCard(winRate, 'Win rate', won.length + ' won · ' + lost.length + ' lost · ' + lbl, '#17B5B0');
   }
@@ -172,8 +171,8 @@
     var groups = groupPartners(list);
     $('chBody').innerHTML = groups.length ? groups.map(partnerRow).join('') :
       "<tr><td colspan='10'><div class='empty'><strong>No deals match.</strong></div></td></tr>";
-    $('chFoot').textContent = groups.length + ' partners · ' + list.length + ' of ' + rows.length + ' Unified Channel Pipeline deals' +
-      (state.range === 'ytd' ? ' (created or closed since ' + ytdStart() + ')' : ' (all time)') + ' · click a partner for deals, then a deal for line items';
+    $('chFoot').textContent = groups.length + ' partners · ' + list.length + ' of ' + rows.length + ' Unified Channel Pipeline leads created ' + rangeLabel() +
+      ' · click a partner for its leads, then a lead for line items';
   }
 
   function setStatus(html, isErr) {
