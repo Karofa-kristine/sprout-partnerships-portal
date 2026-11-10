@@ -233,8 +233,11 @@ enhancements, cleanups, verifications, and ongoing maintenance.
       services are dead/retired; delete them in the Render dashboard to avoid confusion.
 
 ### B. Billing tab (gold_billing_360) refinements — discussed, not done
-- [ ] Optional toggle to narrow from **all invoices (~930)** to **Peoplebox-memo only**
-      (`invoice_memo LIKE '%peoplebox%'`, ~48).
+- [x] ~~Optional toggle to narrow from all invoices to Peoplebox-memo only~~ — DONE
+      (2026-11-10, not yet verified against live RADAR): `billing()` now also selects
+      `invoice_memo AS memo`; the Billing tab shows a **Memo** column, memo is searchable,
+      and a filter dropdown switches between "All invoices" and "Peoplebox memo only"
+      (memo contains "peoplebox", case-insensitive; ~48 expected before cancel-exclusion).
 - [x] ~~Hide cancelled invoices~~ — DONE (2026-11-10): the `gold_billing_360` query now
       excludes any `collection_status`/`invoice_status` containing "cancel" (930 → 829).
 - [ ] Make the Billing table **columns sortable** (click headers) like the Peoplebox roster.

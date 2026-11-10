@@ -76,7 +76,9 @@ async function runStatement(sql) {
  * gold_billing_360 view (all invoices for those clients, any product).
  * Returns [{ client, hsid, invoice_ref, invoice_date, due_date, invoice_status,
  *   collection_status, amount, amount_paid, balance, aging, days_overdue,
- *   currency }]. (Numbers come back as strings from JSON_ARRAY.)
+ *   currency, memo }]. (Numbers come back as strings from JSON_ARRAY.)
+ * `memo` is the NetSuite invoice memo; the UI uses it for the
+ * "Peoplebox memo only" filter (memo contains "peoplebox").
  */
 async function billing(hubspotIds) {
   const ids = [...new Set((hubspotIds || []).filter(Boolean))];
@@ -96,7 +98,8 @@ async function billing(hubspotIds) {
       remaining_balance        balance,
       aging_bucket             aging,
       days_overdue             days_overdue,
-      currency                 currency
+      currency                 currency,
+      invoice_memo             memo
     FROM ${BILLING}
     WHERE hubspot_company_id IN (${inList})
       AND COALESCE(LOWER(collection_status),'') NOT LIKE '%cancel%'
