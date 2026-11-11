@@ -25,6 +25,27 @@ const CACHE_KEY = 'peoplebox-data';
 access.ensureSignInDomains();
 
 app.set('trust proxy', 1);
+
+// ── Old link → new link ───────────────────────────────────
+// The portal moved off peoplebox-client-portal.vercel.app. Any request to an
+// old host is permanently redirected (308, keeps method/path/query) to the
+// canonical host: CANONICAL_HOST if set, otherwise the host of
+// OAUTH_REDIRECT_URI (which already points at the new address). Only the hosts
+// listed in OLD_HOSTS are redirected, so localhost and preview URLs are untouched.
+const OLD_HOSTS = (process.env.OLD_HOSTS || 'peoplebox-client-portal.vercel.app')
+  .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+const CANONICAL_HOST = (() => {
+  if (process.env.CANONICAL_HOST) return process.env.CANONICAL_HOST.trim().toLowerCase();
+  try { return new URL(process.env.OAUTH_REDIRECT_URI).host.toLowerCase(); } catch (e) { return ''; }
+})();
+app.use((req, res, next) => {
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
+  if (CANONICAL_HOST && OLD_HOSTS.includes(host) && host !== CANONICAL_HOST) {
+    return res.redirect(308, 'https://' + CANONICAL_HOST + req.originalUrl);
+  }
+  next();
+});
+
 app.use(express.json());
 // Stateless, signed-cookie sessions. The whole session (just the small `user`
 // object) lives in the cookie, so no server-side store is needed — this works

@@ -12,9 +12,12 @@ products, sourced from the **"Partner Products Active Clients" Google Sheet** pl
 **RADAR** (Databricks RevOps) for billing. Google SSO; per-product access by email
 domain.
 
-- **Live (production):** https://peoplebox-client-portal.vercel.app
-  (Vercel project is named `peoplebox-client-portal`; that's just the project name —
-  the app is the "Sprout Partnerships Portal".)
+- **Live (production):** https://sprout-partnerships-portal.vercel.app
+  (renamed 2026-11-11). The old link https://peoplebox-client-portal.vercel.app
+  still resolves but **redirects (308)** to the new one: see the "Old link → new
+  link" middleware at the top of `server.js` (`OLD_HOSTS`, `CANONICAL_HOST`; the
+  target defaults to the host of `OAUTH_REDIRECT_URI`). The Vercel project itself
+  may still be named `peoplebox-client-portal`.
 - **GitHub:** https://github.com/Karofa-kristine/sprout-partnerships-portal
   (branch `main` — pushing to it is what you deploy from).
 - **Local project path:** `C:\Users\karofac_sprout\Downloads\peoplebox-client-portal`
@@ -96,7 +99,7 @@ when run directly for local dev.
 | `CACHE_TTL_SECONDS` | `60` | |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Sheets read creds | **prod** uses this inline JSON (Vercel has no secret files); local uses `GOOGLE_SERVICE_ACCOUNT_KEY_FILE=./service-account.json` |
 | `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` | Google OAuth web client | |
-| `OAUTH_REDIRECT_URI` | prod: `https://peoplebox-client-portal.vercel.app/auth/google/callback` | **must** also be listed in the Google OAuth client's Authorized redirect URIs (Google Cloud Console → APIs & Services → Credentials) |
+| `OAUTH_REDIRECT_URI` | prod: `https://sprout-partnerships-portal.vercel.app/auth/google/callback` (its host is also the redirect target for the old link) | **must** also be listed in the Google OAuth client's Authorized redirect URIs (Google Cloud Console → APIs & Services → Credentials) |
 | `ALLOWED_EMAIL_DOMAINS` | sign-in domains | `access.js` also unions in internal + all product domains automatically |
 | `INTERNAL_DOMAINS` | `sprout.ph` | internal = sees all products |
 | `RADAR_DB_HOST` | Databricks host | **bare hostname, NO `https://`** — see gotcha below |
