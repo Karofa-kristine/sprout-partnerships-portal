@@ -290,8 +290,11 @@ const PB_LINE_MATCH = `(LOWER(COALESCE(li.product_name,''))   LIKE '%peoplebox%'
 // the "Project Handover" and "Contract Signed" stages (matched on stage_label,
 // case/space-insensitive).
 const PB_EXCLUDED_STAGES = ['project handover', 'contract signed'];
-const PB_SCOPE = `d.create_date >= TIMESTAMP '2025-01-01' AND d.create_date < TIMESTAMP '2027-01-01'
-      AND LOWER(TRIM(COALESCE(d.stage_label,''))) NOT IN (${PB_EXCLUDED_STAGES.map(sqlStr).join(', ')})`;
+// Deals in these stages are NOT dropped from the query: they come back with
+// excluded_stage = 'Y'. The Leads UI hides them from the table but still counts
+// the won ones in the Won KPI and win rate.
+const PB_SCOPE = `d.create_date >= TIMESTAMP '2025-01-01' AND d.create_date < TIMESTAMP '2027-01-01'`;
+const PB_EXCLUDED_FLAG = `CASE WHEN LOWER(TRIM(COALESCE(d.stage_label,''))) IN (${PB_EXCLUDED_STAGES.map(sqlStr).join(', ')}) THEN 'Y' ELSE 'N' END`;
 
 async function peopleboxLeads() {
   const dealsSql = `
@@ -324,7 +327,8 @@ async function peopleboxLeads() {
       d.forecast_category                       forecast_category,
       d.segment                                 segment,
       CAST(d.headcount AS DOUBLE)               headcount,
-      c.Company_name                            company
+      c.Company_name                            company,
+      ${PB_EXCLUDED_FLAG}                      excluded_stage
     FROM shared.revops.silver_deals d
     JOIN pb ON pb.deal_id = d.deal_id
     LEFT JOIN shared.revops.silver_company c ON c.Company_id = d.company_id
@@ -375,7 +379,7 @@ function productLineMatch(product, alias) {
 
 /**
  * Leads for a partner product: every deal created 2025–2026 (same scope and
- * stage exclusions as Peoplebox Leads — PB_SCOPE) with ≥1 matching line item.
+ * stage flagging as Peoplebox Leads — PB_SCOPE / PB_EXCLUDED_FLAG) with ≥1 matching line item.
  * Returns { deals, lines } in exactly the shape of peopleboxLeads(), so the
  * same UI renders it (the pb_* fields hold this product's line totals).
  */
@@ -411,7 +415,8 @@ async function productLeads(product) {
       d.forecast_category                       forecast_category,
       d.segment                                 segment,
       CAST(d.headcount AS DOUBLE)               headcount,
-      c.Company_name                            company
+      c.Company_name                            company,
+      ${PB_EXCLUDED_FLAG}                      excluded_stage
     FROM shared.revops.silver_deals d
     JOIN pm ON pm.deal_id = d.deal_id
     LEFT JOIN shared.revops.silver_company c ON c.Company_id = d.company_id

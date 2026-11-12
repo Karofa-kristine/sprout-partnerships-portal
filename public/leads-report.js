@@ -25,7 +25,10 @@
   var footer = document.getElementById('footer');
   footer.parentNode.insertBefore(panel, footer);
 
-  var rows = [], linesBy = {}, loaded = false, loading = false;
+  // rows: leads shown in the table. hiddenWon: won deals in the Project Handover /
+  // Contract Signed stages (excluded_stage = 'Y') — hidden from the table but
+  // still counted in the Won KPI and win rate.
+  var rows = [], hiddenWon = [], linesBy = {}, loaded = false, loading = false;
   // Multi-select filters: each holds the list of ticked values ([] = all).
   var state = { q: '', stage: [], pipeline: [], rep: [], journey: [], forecast: [], year: [], status: [],
     createdFrom: '', createdTo: '', closeFrom: '', closeTo: '' };
@@ -66,9 +69,9 @@
     if (/omit/.test(f)) return 'var(--muted)'; if (f) return '#7C8CF8'; return 'var(--muted)'; };
   var chev = function (open) { return "<span class='bl-chev" + (open ? ' open' : '') + "' aria-hidden='true'>&#9656;</span>"; };
 
-  function scoped() {
+  function scoped(src) {
     var q = state.q.toLowerCase();
-    return rows.filter(function (r) {
+    return (src || rows).filter(function (r) {
       for (var i = 0; i < MS.length; i++) {
         var m = MS[i], sel = state[m.key];
         if (!sel.length) continue;
@@ -90,14 +93,18 @@
     var sum = function (k) { return list.reduce(function (t, r) { return t + num(r[k]); }, 0); };
     var mql = list.filter(function (r) { return r.journey === 'MQL'; }).length;
     var opp = list.filter(function (r) { return r.journey === 'Opportunity'; }).length;
-    var won = list.filter(isWon), lost = list.filter(isLost);
+    // Won includes the hidden Project Handover / Contract Signed won deals
+    // (same filters applied), so the win rate counts every won deal.
+    var hw = scoped(hiddenWon);
+    var won = list.filter(isWon).concat(hw), lost = list.filter(isLost);
     var wsum = function (a, k) { return a.reduce(function (t, r) { return t + num(r[k]); }, 0); };
     var period = state.year.length ? 'created in ' + state.year.slice().sort().join(', ') : 'created 2025–2026';
     var closed = won.length + lost.length;
     $(P + 'Kpis').innerHTML =
       kpi(list.length, C.label + ' leads', period + ' · with a ' + C.label + ' line item', 'var(--accent)') +
       kpi(mql + opp, 'Ongoing', mql + ' MQL · ' + opp + ' Opportunity', JC.Opportunity) +
-      kpi(won.length, 'Won', '₱' + money(wsum(won, 'pb_amount')) + ' ' + C.label + ' value · ' + (closed ? Math.round(won.length / closed * 100) + '% win rate' : 'no closed leads'), JC.Customer) +
+      kpi(won.length, 'Won', '₱' + money(wsum(won, 'pb_amount')) + ' ' + C.label + ' value · ' + (closed ? Math.round(won.length / closed * 100) + '% win rate' : 'no closed leads') +
+        (hw.length ? ' · incl. ' + hw.length + ' in Project Handover / Contract Signed (not listed below)' : ''), JC.Customer) +
       kpi(lost.length, 'Lost', 'Closed Lost · ' + period, JC['Closed Lost']) +
       kpi('₱' + money(sum('pb_amount')), C.label + ' line-item value', 'sum of ' + C.label + ' line amounts · MRR ₱' + money(sum('pb_mrr')), 'var(--brand)') +
       kpi(list.filter(function (r) { return isOngoing(r) && /commit/i.test(r.forecast_category || ''); }).length, 'Forecast: Commit',
@@ -230,7 +237,9 @@
       .then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error(j.message || ('HTTP ' + r.status)); }); return r.json(); })
       .then(function (d) {
         if (!d.configured) { msg('<strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server.'); return; }
-        rows = d.rows || []; linesBy = {};
+        var all = d.rows || []; linesBy = {};
+        rows = all.filter(function (r) { return r.excluded_stage !== 'Y'; });
+        hiddenWon = all.filter(function (r) { return r.excluded_stage === 'Y' && isWon(r); });
         (d.lines || []).forEach(function (l) { (linesBy[l.deal_id] = linesBy[l.deal_id] || []).push(l); });
         loaded = true;
         buildAllMsel(); refreshSummaries();

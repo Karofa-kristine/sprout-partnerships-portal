@@ -426,3 +426,11 @@ If a client is missing, it likely has no won HubSpot deal with a matching line i
 Billing). Leads keys `ttleads`/`dzleads`/`hsleads` are in `INTERNAL_ONLY` and shared with
 the matching partner domain via `PARTNER_EXTRAS` (`src/access.js`). Styles: shared classes
 `.bl-report` / `.ld-report` (copied from the Peoplebox report CSS, bottom of `styles.css`).
+
+**Update (2026-11-12): every won deal counts toward Won / win rate.** The Leads queries
+(Peoplebox + Teamtailor/Disprz/Hubstaff) no longer drop Project Handover / Contract Signed
+deals; they return them with `excluded_stage = 'Y'` (`PB_EXCLUDED_FLAG` in `radar.js`).
+The Leads UI (`pbleads.js`, regenerated `leads-report.js`) keeps those deals out of the
+table and filter lists, but adds the **won** ones (journey = Customer) to the Won KPI and
+win rate (same Year/Status/filters applied). The Won card notes "incl. N in Project
+Handover / Contract Signed (not listed below)".
