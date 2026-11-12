@@ -346,4 +346,138 @@ async function peopleboxLeads() {
   return { deals, lines };
 }
 
-module.exports = { isConfigured, billing, invoiceLines, channelDeals, channelDealLines, peopleboxLeads };
+// ── Partner products: Teamtailor, Disprz, Hubstaff ─────────────────────────
+// Same Leads and Billing reports as Peoplebox, driven by which HubSpot line
+// items belong to each product. A line item belongs to a product when its
+// product_name or parent_product contains one of these terms (case-insensitive):
+//   Teamtailor: "TeamTailor - (1–200 FTE)" … "(+1000 FTE)", also spelled "Team Tailor"
+//   Disprz:     "Disprz - LXP Essentials", "Disprz - LMS Essentials"
+//   Hubstaff:   "Hubstaff Team Plan", "Hubstaff Enterprise Plan", "Add-on: Hubstaff - …"
+const PRODUCT_TERMS = {
+  teamtailor: ['teamtailor', 'team tailor'],
+  disprz: ['disprz'],
+  hubstaff: ['hubstaff'],
+};
+const PARTNER_PRODUCTS = Object.keys(PRODUCT_TERMS);
+
+function productLineMatch(product, alias) {
+  const terms = PRODUCT_TERMS[product];
+  if (!terms) throw new Error('Unknown product: ' + product);
+  const a = alias || 'li';
+  const likes = [];
+  terms.forEach((t) => {
+    const pat = sqlStr('%' + t + '%');
+    likes.push(`LOWER(COALESCE(${a}.product_name,'')) LIKE ${pat}`);
+    likes.push(`LOWER(COALESCE(${a}.parent_product,'')) LIKE ${pat}`);
+  });
+  return '(' + likes.join('\n      OR ') + ')';
+}
+
+/**
+ * Leads for a partner product: every deal created 2025–2026 (same scope and
+ * stage exclusions as Peoplebox Leads — PB_SCOPE) with ≥1 matching line item.
+ * Returns { deals, lines } in exactly the shape of peopleboxLeads(), so the
+ * same UI renders it (the pb_* fields hold this product's line totals).
+ */
+async function productLeads(product) {
+  const MATCH = productLineMatch(product, 'li');
+  const dealsSql = `
+    WITH pm AS (
+      SELECT li.deal_id,
+             concat_ws(', ', collect_set(li.product_name)) products,
+             SUM(li.amount) pb_amount,
+             SUM(li.mrr)    pb_mrr
+      FROM shared.revops.silver_line_items li
+      WHERE ${MATCH}
+      GROUP BY li.deal_id
+    )
+    SELECT
+      CAST(d.deal_id AS STRING)                 deal_id,
+      d.deal_name                               deal_name,
+      d.pipeline_name                           pipeline,
+      d.deal_type                               deal_type,
+      d.stage_label                             stage,
+      d.client_journey_stage                    journey,
+      CAST(d.create_date AS STRING)             create_date,
+      CAST(d.projected_close_date AS STRING)    projected_close_date,
+      CAST(d.close_date AS STRING)              close_date,
+      CAST(d.amount AS DOUBLE)                  amount,
+      d.mrr                                     mrr,
+      pm.pb_amount                              pb_amount,
+      pm.pb_mrr                                 pb_mrr,
+      pm.products                               products,
+      d.sales_rep                               sales_rep,
+      d.partner_on_record                       partner,
+      d.forecast_category                       forecast_category,
+      d.segment                                 segment,
+      CAST(d.headcount AS DOUBLE)               headcount,
+      c.Company_name                            company
+    FROM shared.revops.silver_deals d
+    JOIN pm ON pm.deal_id = d.deal_id
+    LEFT JOIN shared.revops.silver_company c ON c.Company_id = d.company_id
+    WHERE ${PB_SCOPE}
+    ORDER BY d.create_date DESC
+    LIMIT 5000`;
+  const linesSql = `
+    SELECT
+      CAST(li.deal_id AS STRING) deal_id,
+      li.product_name, li.parent_product, li.product_status,
+      li.recurring_billing_frequency, li.quantity, li.number_of_users,
+      li.unit_price, li.discount, li.amount, li.mrr, li.contract_term_months
+    FROM shared.revops.silver_line_items li
+    JOIN shared.revops.silver_deals d ON d.deal_id = li.deal_id
+    WHERE ${MATCH} AND ${PB_SCOPE}
+    ORDER BY li.deal_id, li.amount DESC
+    LIMIT 20000`;
+  const [deals, lines] = await Promise.all([runStatement(dealsSql), runStatement(linesSql)]);
+  return { deals, lines };
+}
+
+/**
+ * Billing / AR for a partner product. The Teamtailor / Disprz / Hubstaff sheet
+ * tabs have no HubSpot Company ID column, so clients come from RADAR instead:
+ * companies with a WON deal (client_journey_stage = 'Customer') carrying one of
+ * this product's line items (product_status 'Availed' or blank). Their invoices
+ * come from gold_billing_360 exactly like Peoplebox billing (all invoices for
+ * those clients, any product; cancelled excluded). Same row shape as billing().
+ */
+async function productBilling(product) {
+  const MATCH = productLineMatch(product, 'li');
+  const sql = `
+    WITH clients AS (
+      SELECT DISTINCT TRIM(CAST(d.company_id AS STRING)) hsid
+      FROM shared.revops.silver_deals d
+      JOIN shared.revops.silver_line_items li ON li.deal_id = d.deal_id
+      WHERE d.client_journey_stage = 'Customer'
+        AND d.company_id IS NOT NULL
+        AND COALESCE(li.product_status, 'Availed') = 'Availed'
+        AND ${MATCH}
+    )
+    SELECT
+      customer_name            client,
+      hubspot_company_id       hsid,
+      invoice_number           invoice_ref,
+      CAST(invoice_date AS STRING) invoice_date,
+      CAST(due_date AS STRING)     due_date,
+      invoice_status           invoice_status,
+      collection_status        collection_status,
+      invoice_amount           amount,
+      netsuite_amount_paid     amount_paid,
+      remaining_balance        balance,
+      aging_bucket             aging,
+      days_overdue             days_overdue,
+      currency                 currency,
+      invoice_memo             memo
+    FROM ${BILLING}
+    WHERE TRIM(CAST(hubspot_company_id AS STRING)) IN (SELECT hsid FROM clients)
+      AND COALESCE(LOWER(collection_status),'') NOT LIKE '%cancel%'
+      AND COALESCE(LOWER(invoice_status),'')    NOT LIKE '%cancel%'
+    ORDER BY invoice_date DESC, client
+    LIMIT 5000`;
+  return runStatement(sql);
+}
+
+module.exports = {
+  isConfigured, billing, invoiceLines, channelDeals, channelDealLines, peopleboxLeads,
+  PARTNER_PRODUCTS, PRODUCT_TERMS, productLeads, productBilling,
+};

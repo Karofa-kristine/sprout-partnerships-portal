@@ -26,12 +26,16 @@ function domainOf(email) {
 
 // Extra reports beyond the product tabs. Internal Sprout accounts get all of
 // them. ChannelHub spans every partner, so it stays internal-only.
-const INTERNAL_ONLY = ['channelhub', 'pbleads'];
+const INTERNAL_ONLY = ['channelhub', 'pbleads', 'ttleads', 'dzleads', 'hsleads'];
 
 // Extra reports a partner domain may also open (on top of its own product tab).
-// Peoplebox Leads (pbleads) is shared with peoplebox.ai accounts.
+// Each partner sees its own product's Leads report, like Peoplebox does.
+// (Billing reports ride on the product key itself, so they need no entry here.)
 const PARTNER_EXTRAS = {
   'peoplebox.ai': ['pbleads'],
+  'teamtailor.com': ['ttleads'],
+  'disprz.com': ['dzleads'],
+  'hubstaff.com': ['hsleads'],
 };
 
 function allowedProductsForDomain(domain) {

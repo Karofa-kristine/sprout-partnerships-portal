@@ -394,3 +394,35 @@ ChannelHub heading + tile (`#chHead`, `#chtiles`) start hidden and are shown onl
 `/api/access` includes `channelhub` (internal `INTERNAL_DOMAINS` accounts). Partner
 accounts (Peoplebox, Teamtailor, Disprz, Hubstaff) never see it; `/api/channelhub*`
 already returns 403 for them.
+
+---
+
+## Teamtailor / Disprz / Hubstaff — Billing + Leads (added 2026-11-12, not yet verified against live RADAR)
+
+Each of these product tabs now has the same two cards as Peoplebox: **<Product> Billing**
+and **<Product> Leads** (tabs `ttbill`/`ttleads`, `dzbill`/`dzleads`, `hsbill`/`hsleads`).
+Config lives in `PARTNER_REPORTS` (inline script in `index.html`) and `PRODUCT_TERMS`
+(`src/radar.js`).
+
+**Which line items count** (`product_name` or `parent_product` contains, case-insensitive):
+- Teamtailor: "teamtailor" or "team tailor" (TeamTailor - (1–200 / 201–500 / 501–1000 / +1000 FTE))
+- Disprz: "disprz" (Disprz - LXP Essentials, Disprz - LMS Essentials)
+- Hubstaff: "hubstaff" (Hubstaff Team / Enterprise Plan, Add-on: Hubstaff - …)
+
+**Leads** — `GET /api/leads/:product` → `radar.productLeads()`: identical query/scope to
+Peoplebox Leads (created 2025–2026, Project Handover / Contract Signed excluded). UI is
+`public/leads-report.js`, **generated** from `public/pbleads.js` + the Peoplebox Leads panel
+markup (keep them in sync; the generator was a one-off script — re-derive by hand if needed).
+
+**Billing** — `GET /api/pbilling/:product` (+ `/lines?invoice=`) → `radar.productBilling()`.
+These sheet tabs have **no HubSpot Company ID column**, so clients come from RADAR instead:
+companies with a **won** deal (`client_journey_stage = 'Customer'`) that has one of the
+product's line items (`product_status` Availed or blank). Their invoices come from
+`gold_billing_360` like Peoplebox (all invoices for those clients, any product; cancelled
+excluded); the memo filter offers "<Product> memo only". UI is `public/billing-report.js`.
+If a client is missing, it likely has no won HubSpot deal with a matching line item.
+
+**Access** — Billing rides on the product key (each partner sees its own, like Peoplebox
+Billing). Leads keys `ttleads`/`dzleads`/`hsleads` are in `INTERNAL_ONLY` and shared with
+the matching partner domain via `PARTNER_EXTRAS` (`src/access.js`). Styles: shared classes
+`.bl-report` / `.ld-report` (copied from the Peoplebox report CSS, bottom of `styles.css`).

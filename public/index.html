@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Sprout Partnerships Portal</title>
   <link rel="icon" href="/sprout-leaf.png"/>
-  <link rel="stylesheet" href="/styles.css?v=20261112a"/>
+  <link rel="stylesheet" href="/styles.css?v=20261112b"/>
 </head>
 <body>
   <div class="topbar">
@@ -266,9 +266,11 @@
   <div class="overlay" id="overlay"></div>
   <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 
-  <script src="/app.js?v=20261112a"></script>
-  <script src="/channelhub.js?v=20261112a"></script>
-  <script src="/pbleads.js?v=20261112a"></script>
+  <script src="/app.js?v=20261112b"></script>
+  <script src="/channelhub.js?v=20261112b"></script>
+  <script src="/pbleads.js?v=20261112b"></script>
+  <script src="/billing-report.js?v=20261112b"></script>
+  <script src="/leads-report.js?v=20261112b"></script>
   <script>
     // Navigation. All access is via the Overview tiles (data-goto="x"); the
     // top-bar "Overview" button returns home. Adding a report is a tile +
@@ -281,7 +283,19 @@
       // (Internal @sprout.ph users keep export.) Data access itself is already
       // gated per product on the server; this just removes the export option.
       function hideExports(){ var els = document.querySelectorAll('#exportBtn, [id$="Export"]'); for(var i=0;i<els.length;i++) els[i].style.display = 'none'; }
-      function productOf(tab){ return tab === 'subs' ? 'peoplebox' : tab; }
+      // Billing + Leads sub-reports for Teamtailor, Disprz, Hubstaff.
+      // Billing tabs ride on the product's own access; Leads tabs have their own key.
+      var PARTNER_REPORTS = {
+        teamtailor: { label:'Teamtailor', bill:'ttbill', leads:'ttleads', terms:['teamtailor','team tailor'],
+          lineHtml:'<strong>TeamTailor</strong> / <strong>Team Tailor</strong> (1–200, 201–500, 501–1000, +1000 FTE)' },
+        disprz: { label:'Disprz', bill:'dzbill', leads:'dzleads', terms:['disprz'],
+          lineHtml:'<strong>Disprz</strong> (LXP Essentials, LMS Essentials)' },
+        hubstaff: { label:'Hubstaff', bill:'hsbill', leads:'hsleads', terms:['hubstaff'],
+          lineHtml:'<strong>Hubstaff</strong> (Team / Enterprise Plan and Hubstaff add-ons)' },
+      };
+      var BILL_TAB_PRODUCT = { subs:'peoplebox' };
+      Object.keys(PARTNER_REPORTS).forEach(function(p){ BILL_TAB_PRODUCT[PARTNER_REPORTS[p].bill] = p; });
+      function productOf(tab){ return BILL_TAB_PRODUCT[tab] || tab; }
       function canAccess(tab){ if(tab === 'overview') return true; return !!ACCESS && ACCESS.indexOf(productOf(tab)) >= 0; }
 
       function noAccessToast(){
@@ -350,7 +364,7 @@
           // Single-product partner → go straight to their assigned tab on login
           // (internal @sprout.ph users stay on the Overview and see all tiles).
           // Sub-reports (e.g. Peoplebox Leads) don't count as separate products.
-          var SUBREPORTS = ['pbleads'];
+          var SUBREPORTS = ['pbleads', 'ttleads', 'dzleads', 'hsleads'];
           var mainProducts = ACCESS.filter(function(p){ return SUBREPORTS.indexOf(p) < 0; });
           if(!IS_INTERNAL && mainProducts.length === 1) activateTab(mainProducts[0]);
         });
@@ -669,9 +683,20 @@
           var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = key + '-clients.csv';
           document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
         }
+        function subCards(){
+          var pr = PARTNER_REPORTS[key]; if(!pr) return '';
+          var canLeads = !!ACCESS && ACCESS.indexOf(pr.leads) >= 0;
+          return "<button class='subnav-card' data-goto='" + pr.bill + "'>" +
+              "<span class='ic'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='2' y='5' width='20' height='14' rx='2'/><path d='M2 10h20'/></svg></span>" +
+              "<span class='txt'><b>" + esc(pr.label) + " Billing</b><small>Invoice billing &amp; AR from RADAR for " + esc(pr.label) + " clients (won deals with " + esc(pr.label) + " line items)</small></span><span class='arr'>→</span></button>" +
+            (canLeads ? "<button class='subnav-card' data-goto='" + pr.leads + "'>" +
+              "<span class='ic'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 3v18h18'/><path d='m7 15 4-4 3 3 5-6'/></svg></span>" +
+              "<span class='txt'><b>" + esc(pr.label) + " Leads</b><small>All leads created 2025–2026 with " + esc(pr.label) + " line items, from RADAR</small></span><span class='arr'>→</span></button>" : '');
+        }
         function shell(){
           panel.innerHTML =
             "<div class='section-head'><h2>" + esc(title) + "</h2><span class='note' id='" + key + "Note'></span></div>" +
+            subCards() +
             "<div class='section-head'><h2>Integration Status</h2></div>" +
             "<div class='kpis' id='" + key + "Kpis'></div>" +
             "<p style='margin:-6px 2px 20px;color:var(--muted);font-size:12.5px;line-height:1.5;max-width:900px'>Integration figures reflect current integration &amp; CRF status and cover only clients already live or done implementing. <strong>&ldquo;Needs action&rdquo;</strong> counts Active clients tagged &ldquo;Pending&rdquo; or &ldquo;SSO only (no data sync required)&rdquo;; clients tagged &ldquo;No Sprout HR&rdquo; or &ldquo;No Activation Required&rdquo; are not counted.</p>" +
@@ -723,6 +748,11 @@
         channelhub: window.ChannelHub,
         pbleads: window.PeopleboxLeads,
       };
+      Object.keys(PARTNER_REPORTS).forEach(function(p){
+        var pr = PARTNER_REPORTS[p];
+        reports[pr.bill] = window.makeBillingReport({ product:p, label:pr.label, tab:pr.bill, back:p, memoTerms:pr.terms });
+        reports[pr.leads] = window.makeLeadsReport({ product:p, label:pr.label, tab:pr.leads, back:p, lineHtml:pr.lineHtml });
+      });
     })();
   </script>
 </body>

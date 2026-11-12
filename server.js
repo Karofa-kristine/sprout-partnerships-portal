@@ -225,6 +225,84 @@ app.get('/api/peoplebox/leads', auth.requireAuth, requireProduct('pbleads'), asy
   }
 });
 
+// ── Partner product Billing + Leads (Teamtailor, Disprz, Hubstaff) ─────────
+// Same reports as Peoplebox Billing / Peoplebox Leads, per product.
+//   Billing → access rides on the product key (like Peoplebox Billing).
+//   Leads   → its own access key (LEADS_KEY), see src/access.js.
+const LEADS_KEY = { teamtailor: 'ttleads', disprz: 'dzleads', hubstaff: 'hsleads' };
+const isPartnerProduct = (p) => radar.PARTNER_PRODUCTS.indexOf(p) >= 0;
+function canOpen(req, key) { return allowedProducts(req).indexOf(key) >= 0; }
+
+async function productBillingRows(product, force) {
+  const key = 'radar-billing-' + product;
+  if (!force) { const c = cache.get(key); if (c) return { rows: c, cached: true }; }
+  const rows = await radar.productBilling(product);
+  cache.set(key, rows, TTL);
+  return { rows, cached: false };
+}
+
+app.get('/api/pbilling/:product', auth.requireAuth, async (req, res) => {
+  const product = req.params.product;
+  if (!isPartnerProduct(product)) return res.status(404).json({ error: 'unknown_product' });
+  if (!canOpen(req, product)) return res.status(403).json({ error: 'forbidden', message: 'Your account does not have access to this product.' });
+  try {
+    if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
+    const { rows, cached } = await productBillingRows(product, req.query.refresh === '1');
+    const clients = {}; rows.forEach((r) => { clients[r.hsid || r.client] = 1; });
+    res.json({ configured: true, cached, clientCount: Object.keys(clients).length, rows });
+  } catch (err) {
+    console.error('Failed to load billing for', product, err);
+    res.status(502).json({ error: 'radar_failed', message: err.message });
+  }
+});
+
+// Invoice line items for a partner product's billing report. Only invoices
+// already in that product's billing result are served.
+app.get('/api/pbilling/:product/lines', auth.requireAuth, async (req, res) => {
+  const product = req.params.product;
+  if (!isPartnerProduct(product)) return res.status(404).json({ error: 'unknown_product' });
+  if (!canOpen(req, product)) return res.status(403).json({ error: 'forbidden', message: 'Your account does not have access to this product.' });
+  try {
+    if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
+    const inv = String(req.query.invoice || '').trim();
+    if (!inv) return res.status(400).json({ error: 'missing_invoice', message: 'invoice is required' });
+    const { rows } = await productBillingRows(product, false);
+    if (!rows.some((r) => r.invoice_ref === inv)) {
+      return res.status(404).json({ error: 'unknown_invoice', message: 'Invoice is not in this billing report.' });
+    }
+    const key = 'radar-lines:' + inv;
+    const cached = cache.get(key);
+    if (cached) return res.json({ configured: true, cached: true, rows: cached });
+    const lines = await radar.invoiceLines(inv);
+    cache.set(key, lines, TTL);
+    res.json({ configured: true, cached: false, rows: lines });
+  } catch (err) {
+    console.error('Failed to load invoice lines for', product, err);
+    res.status(502).json({ error: 'radar_failed', message: err.message });
+  }
+});
+
+app.get('/api/leads/:product', auth.requireAuth, async (req, res) => {
+  const product = req.params.product;
+  if (!isPartnerProduct(product)) return res.status(404).json({ error: 'unknown_product' });
+  if (!canOpen(req, LEADS_KEY[product])) return res.status(403).json({ error: 'forbidden', message: 'Your account does not have access to this report.' });
+  try {
+    if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
+    const key = 'radar-leads-' + product;
+    if (req.query.refresh !== '1') {
+      const c = cache.get(key);
+      if (c) return res.json({ configured: true, cached: true, rows: c.rows, lines: c.lines, fetchedAt: c.at });
+    }
+    const { deals, lines } = await radar.productLeads(product);
+    const at = new Date().toISOString();
+    cache.set(key, { rows: deals, lines, at }, TTL);
+    res.json({ configured: true, cached: false, rows: deals, lines, fetchedAt: at });
+  } catch (err) {
+    console.error('Failed to load leads for', product, err);
+    res.status(502).json({ error: 'radar_failed', message: err.message });
+  }
+});
+
 // ── Raw sheet-tab dumps (Teamtailor, Disprz, Hubstaff) ───
 // Reads a whitelisted tab and returns all columns + rows generically, so the
 // portal reflects whatever the sheet holds (no fixed schema). The key must be
