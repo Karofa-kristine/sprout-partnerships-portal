@@ -380,3 +380,11 @@ earlier "2025 onward, no end date"). Year filter reads "All years (2025–2026)"
   headers). Nothing ticked = all. Lists are `position:fixed` (`placePop()` in
   `pbleads.js`) so the scrolling table can't clip them; they close on outside click,
   Esc, or page/table scroll. "Clear filters" resets every filter incl. the date ranges.
+
+**Update (2026-11-12): Peoplebox Leads shared with peoplebox.ai.** `PARTNER_EXTRAS` in
+`src/access.js` grants `pbleads` to `peoplebox.ai` accounts on top of their Peoplebox
+tab (API + card visibility follow automatically). ChannelHub stays internal-only.
+Partner accounts are still auto-opened on their one product tab: the login redirect
+in `index.html` ignores sub-reports (`SUBREPORTS = ['pbleads']`) when counting products.
+Note: this shows Peoplebox's partner pipeline (deal names, companies, sales reps, amounts)
+to Peoplebox users; export buttons stay hidden for partner accounts.

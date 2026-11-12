@@ -24,13 +24,20 @@ function domainOf(email) {
   return ((email || '').split('@')[1] || '').toLowerCase();
 }
 
-// Reports only internal Sprout accounts may open (they span every partner,
-// so no partner domain should ever see them).
+// Extra reports beyond the product tabs. Internal Sprout accounts get all of
+// them. ChannelHub spans every partner, so it stays internal-only.
 const INTERNAL_ONLY = ['channelhub', 'pbleads'];
+
+// Extra reports a partner domain may also open (on top of its own product tab).
+// Peoplebox Leads (pbleads) is shared with peoplebox.ai accounts.
+const PARTNER_EXTRAS = {
+  'peoplebox.ai': ['pbleads'],
+};
 
 function allowedProductsForDomain(domain) {
   if (internalDomains().includes(domain)) return Object.keys(PRODUCT_DOMAINS).concat(INTERNAL_ONLY);
-  return Object.keys(PRODUCT_DOMAINS).filter((k) => PRODUCT_DOMAINS[k] === domain);
+  return Object.keys(PRODUCT_DOMAINS).filter((k) => PRODUCT_DOMAINS[k] === domain)
+    .concat(PARTNER_EXTRAS[domain] || []);
 }
 
 function userDomain(req) {

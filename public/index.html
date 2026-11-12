@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Sprout Partnerships Portal</title>
   <link rel="icon" href="/sprout-leaf.png"/>
-  <link rel="stylesheet" href="/styles.css?v=20261110j"/>
+  <link rel="stylesheet" href="/styles.css?v=20261112a"/>
 </head>
 <body>
   <div class="topbar">
@@ -87,7 +87,7 @@
       <span class="ic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
       </span>
-      <span class="txt"><b>Peoplebox Leads</b><small>All leads created 2025–2026 with Peoplebox / Perform Pro line items, from RADAR · Sprout staff only</small></span>
+      <span class="txt"><b>Peoplebox Leads</b><small>All leads created 2025–2026 with Peoplebox / Perform Pro line items, from RADAR</small></span>
       <span class="arr">→</span>
     </button>
 
@@ -264,9 +264,9 @@
   <div class="overlay" id="overlay"></div>
   <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 
-  <script src="/app.js?v=20261110j"></script>
-  <script src="/channelhub.js?v=20261110j"></script>
-  <script src="/pbleads.js?v=20261110j"></script>
+  <script src="/app.js?v=20261112a"></script>
+  <script src="/channelhub.js?v=20261112a"></script>
+  <script src="/pbleads.js?v=20261112a"></script>
   <script>
     // Navigation. All access is via the Overview tiles (data-goto="x"); the
     // top-bar "Overview" button returns home. Adding a report is a tile +
@@ -343,7 +343,10 @@
           });
           // Single-product partner → go straight to their assigned tab on login
           // (internal @sprout.ph users stay on the Overview and see all tiles).
-          if(!IS_INTERNAL && ACCESS.length === 1) activateTab(ACCESS[0]);
+          // Sub-reports (e.g. Peoplebox Leads) don't count as separate products.
+          var SUBREPORTS = ['pbleads'];
+          var mainProducts = ACCESS.filter(function(p){ return SUBREPORTS.indexOf(p) < 0; });
+          if(!IS_INTERNAL && mainProducts.length === 1) activateTab(mainProducts[0]);
         });
 
       // ---- Peoplebox Billing & AR (RADAR / gold_billing_360) ----
