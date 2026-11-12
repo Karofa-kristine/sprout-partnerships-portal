@@ -388,3 +388,9 @@ Partner accounts are still auto-opened on their one product tab: the login redir
 in `index.html` ignores sub-reports (`SUBREPORTS = ['pbleads']`) when counting products.
 Note: this shows Peoplebox's partner pipeline (deal names, companies, sales reps, amounts)
 to Peoplebox users; export buttons stay hidden for partner accounts.
+
+**Update (2026-11-12): ChannelHub hidden from partner accounts.** The Overview's
+ChannelHub heading + tile (`#chHead`, `#chtiles`) start hidden and are shown only when
+`/api/access` includes `channelhub` (internal `INTERNAL_DOMAINS` accounts). Partner
+accounts (Peoplebox, Teamtailor, Disprz, Hubstaff) never see it; `/api/channelhub*`
+already returns 403 for them.

@@ -59,11 +59,13 @@
       </button>
     </div>
 
-    <div class="overview-head" style="margin-top:36px">
+    <!-- ChannelHub section: hidden until /api/access confirms the account may
+         open it (only internal Sprout accounts). Partners never see it. -->
+    <div class="overview-head" id="chHead" style="margin-top:36px;display:none">
       <h2>ChannelHub</h2>
       <p>Centralized platform for all channel partners and deals. Real-time visibility into partner activities and deal progress.</p>
     </div>
-    <div class="ptiles" id="chtiles">
+    <div class="ptiles" id="chtiles" style="display:none">
       <button class="ptile" data-goto="channelhub" style="--c:#C2841C">
         <div class="ptile-logo"><span class="mono">CH</span></div>
         <div><div class="nm">Channel Partners &amp; Deals</div><div class="desc">Unified Channel Pipeline from RADAR — partner KPIs, deal pipeline by stage, and partner → deal → line-item drill-down. Internal Sprout accounts only.</div></div>
@@ -326,6 +328,10 @@
           if(!IS_INTERNAL) hideExports();
           // Internal-only sub-report inside the Peoplebox tab.
           var pblCard = document.getElementById('pblCard'); if(pblCard) pblCard.style.display = (ACCESS.indexOf('pbleads') >= 0) ? '' : 'none';
+          // ChannelHub section on the Overview: shown only to accounts that may
+          // open it (internal Sprout). Partner accounts don't see it at all.
+          var chOk = ACCESS.indexOf('channelhub') >= 0;
+          ['chHead', 'chtiles'].forEach(function(id){ var el = document.getElementById(id); if(el) el.style.display = chOk ? '' : 'none'; });
           // Everyone sees every product tile; tiles the account can't open are
           // shown locked (and blocked from opening — the server also 403s the data).
           document.querySelectorAll('.ptile').forEach(function(t){
