@@ -434,3 +434,24 @@ The Leads UI (`pbleads.js`, regenerated `leads-report.js`) keeps those deals out
 table and filter lists, but adds the **won** ones (journey = Customer) to the Won KPI and
 win rate (same Year/Status/filters applied). The Won card notes "incl. N in Project
 Handover / Contract Signed (not listed below)".
+
+**Update (2026-11-12): RADAR speed + reliability.**
+- `src/radar.js` `runStatement`: submits with `wait_timeout: '10s'` so quick queries return
+  inline (no polling); polls back off 0.5s → 2s; submit/poll calls retry network errors,
+  HTTP 429 and 5xx (after 1s, then 3s); one query may take up to `RADAR_QUERY_BUDGET_MS`
+  (default 240000, under Vercel's 300s limit). Multi-chunk results are now read in full
+  (extra chunks fetched straight from Databricks with the server-side token). Each query
+  logs `[radar] query ok in Nms, N rows` in the Vercel logs.
+- `server.js` `radarLoad()`: every RADAR endpoint caches for `RADAR_CACHE_TTL_SECONDS`
+  (default 1800 = 30 min; separate from the sheet's `CACHE_TTL_SECONDS`), shares one
+  in-flight query per report, and if RADAR fails serves the last good copy (up to 24h,
+  same server instance) with `stale: true`. Refresh buttons still bypass the cache.
+- `src/cache.js`: keeps expired entries for `getStale()`.
+- `public/radar-fetch.js`: `radarFetch()` (used by all RADAR reports) retries once after 3s on
+  network/5xx errors; `radarStaleNote()` adds a warning to the report's "as of" line when
+  the server sent the last saved copy.
+- Fixed the `channelDealLines` deal-id check (`/^d+$/` → `/^\d+$/`), which made every
+  ChannelHub line-item drill-down fail with "Invalid deal id".
+- `leads-report.js` was patched directly (same change as `pbleads.js`).
+- Still slow after idle: the first query wakes the Databricks warehouse; only the
+  warehouse's auto-stop / serverless setting changes that.

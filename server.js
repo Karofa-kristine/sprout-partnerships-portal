@@ -19,6 +19,9 @@ const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const TAB = process.env.PEOPLEBOX_TAB || 'Peoplebox';
 const TTL = Number(process.env.CACHE_TTL_SECONDS || 300);
 const CACHE_KEY = 'peoplebox-data';
+// RADAR results are cached longer than the sheet (Databricks queries are slow);
+// the Refresh buttons always bypass the cache.
+const RADAR_TTL = Number(process.env.RADAR_CACHE_TTL_SECONDS || 1800);
 
 // Per-product access control lives in src/access.js. Ensure every internal +
 // partner domain can sign in (product access is enforced per route below).
@@ -110,26 +113,62 @@ app.get('/api/data', auth.requireAuth, requireProduct('peoplebox'), async (req, 
   }
 });
 
+// ── RADAR loading helper ─────────────────────────────────
+// Every RADAR-backed endpoint goes through radarLoad():
+//   • serves the cached result while fresh (RADAR_TTL) unless force=true;
+//   • shares one in-flight query per key, so users opening the same report at
+//     the same time don't each start a Databricks query;
+//   • if RADAR fails, falls back to the last good result (up to 24h old) and
+//     flags it stale, so the report keeps working through a RADAR hiccup.
+const radarInflight = new Map();
+async function radarLoad(key, force, loader) {
+  if (!force) {
+    const c = cache.get(key);
+    if (c !== null) return { value: c, cached: true };
+  }
+  let p = radarInflight.get(key);
+  if (!p) {
+    p = (async () => {
+      const value = await loader();
+      cache.set(key, value, RADAR_TTL);
+      return value;
+    })();
+    radarInflight.set(key, p);
+    p.then(() => radarInflight.delete(key), () => radarInflight.delete(key));
+  }
+  try {
+    return { value: await p, cached: false };
+  } catch (err) {
+    const old = cache.getStale(key);
+    if (!old) throw err;
+    console.warn('RADAR failed for', key, '— serving last good copy:', err.message);
+    return { value: old.value, cached: true, stale: true, staleAt: new Date(old.at).toISOString(), staleReason: err.message };
+  }
+}
+// Extra response fields when the result is a stale fallback.
+const staleInfo = (r) => (r.stale ? { stale: true, staleAt: r.staleAt, staleReason: r.staleReason } : {});
+
 // ── Peoplebox billing / AR from RADAR (Databricks) ───────
 // All invoices (gold_billing_360) for the tracker's Peoplebox clients,
-// matched by HubSpot Company ID.
+// matched by HubSpot Company ID. Cached as { rows, clientCount }.
 const BILLING_CACHE_KEY = 'radar-billing';
+
+function peopleboxBilling(force) {
+  return radarLoad(BILLING_CACHE_KEY, force, async () => {
+    const data = await loadData({});
+    const ids = [...new Set((data.clients || []).map((c) => c.hsid).filter(Boolean))];
+    const rows = await radar.billing(ids);
+    return { rows, clientCount: ids.length };
+  });
+}
 
 app.get('/api/billing', auth.requireAuth, requireProduct('peoplebox'), async (req, res) => {
   try {
     if (!radar.isConfigured()) {
       return res.json({ configured: false, rows: [] });
     }
-    const force = req.query.refresh === '1';
-    if (!force) {
-      const cached = cache.get(BILLING_CACHE_KEY);
-      if (cached) return res.json({ configured: true, cached: true, rows: cached });
-    }
-    const data = await loadData({});
-    const ids = [...new Set((data.clients || []).map((c) => c.hsid).filter(Boolean))];
-    const rows = await radar.billing(ids);
-    cache.set(BILLING_CACHE_KEY, rows, TTL);
-    res.json({ configured: true, cached: false, clientCount: ids.length, rows });
+    const r = await peopleboxBilling(req.query.refresh === '1');
+    res.json({ configured: true, cached: r.cached, clientCount: r.value.clientCount, rows: r.value.rows, ...staleInfo(r) });
   } catch (err) {
     console.error('Failed to load RADAR billing:', err);
     res.status(502).json({ error: 'radar_failed', message: err.message });
@@ -145,23 +184,13 @@ app.get('/api/billing/lines', auth.requireAuth, requireProduct('peoplebox'), asy
     const inv = String(req.query.invoice || '').trim();
     if (!inv) return res.status(400).json({ error: 'missing_invoice', message: 'invoice is required' });
 
-    let billingRows = cache.get(BILLING_CACHE_KEY);
-    if (!billingRows) {
-      const data = await loadData({});
-      const ids = [...new Set((data.clients || []).map((c) => c.hsid).filter(Boolean))];
-      billingRows = await radar.billing(ids);
-      cache.set(BILLING_CACHE_KEY, billingRows, TTL);
-    }
+    const billingRows = (await peopleboxBilling(false)).value.rows;
     if (!billingRows.some((r) => r.invoice_ref === inv)) {
       return res.status(404).json({ error: 'unknown_invoice', message: 'Invoice is not in the Peoplebox billing report.' });
     }
 
-    const key = 'radar-lines:' + inv;
-    const cached = cache.get(key);
-    if (cached) return res.json({ configured: true, cached: true, rows: cached });
-    const rows = await radar.invoiceLines(inv);
-    cache.set(key, rows, TTL);
-    res.json({ configured: true, cached: false, rows });
+    const r = await radarLoad('radar-lines:' + inv, false, () => radar.invoiceLines(inv));
+    res.json({ configured: true, cached: r.cached, rows: r.value, ...staleInfo(r) });
   } catch (err) {
     console.error('Failed to load invoice lines:', err);
     res.status(502).json({ error: 'radar_failed', message: err.message });
@@ -175,14 +204,10 @@ const CH_CACHE_KEY = 'radar-channelhub';
 app.get('/api/channelhub', auth.requireAuth, requireProduct('channelhub'), async (req, res) => {
   try {
     if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
-    if (req.query.refresh !== '1') {
-      const cached = cache.get(CH_CACHE_KEY);
-      if (cached) return res.json({ configured: true, cached: true, rows: cached.rows, fetchedAt: cached.at });
-    }
-    const rows = await radar.channelDeals();
-    const at = new Date().toISOString();
-    cache.set(CH_CACHE_KEY, { rows, at }, TTL);
-    res.json({ configured: true, cached: false, rows, fetchedAt: at });
+    const r = await radarLoad(CH_CACHE_KEY, req.query.refresh === '1', async () => ({
+      rows: await radar.channelDeals(), at: new Date().toISOString(),
+    }));
+    res.json({ configured: true, cached: r.cached, rows: r.value.rows, fetchedAt: r.value.at, ...staleInfo(r) });
   } catch (err) {
     console.error('Failed to load ChannelHub:', err);
     res.status(502).json({ error: 'radar_failed', message: err.message });
@@ -194,12 +219,8 @@ app.get('/api/channelhub/lines', auth.requireAuth, requireProduct('channelhub'),
     if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
     const id = String(req.query.deal || '').trim();
     if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'bad_deal', message: 'deal must be a numeric deal id' });
-    const key = 'radar-ch-lines:' + id;
-    const cached = cache.get(key);
-    if (cached) return res.json({ configured: true, cached: true, rows: cached });
-    const rows = await radar.channelDealLines(id);
-    cache.set(key, rows, TTL);
-    res.json({ configured: true, cached: false, rows });
+    const r = await radarLoad('radar-ch-lines:' + id, false, () => radar.channelDealLines(id));
+    res.json({ configured: true, cached: r.cached, rows: r.value, ...staleInfo(r) });
   } catch (err) {
     console.error('Failed to load ChannelHub line items:', err);
     res.status(502).json({ error: 'radar_failed', message: err.message });
@@ -211,14 +232,11 @@ const PBL_CACHE_KEY = 'radar-pb-leads';
 app.get('/api/peoplebox/leads', auth.requireAuth, requireProduct('pbleads'), async (req, res) => {
   try {
     if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
-    if (req.query.refresh !== '1') {
-      const cached = cache.get(PBL_CACHE_KEY);
-      if (cached) return res.json({ configured: true, cached: true, rows: cached.rows, lines: cached.lines, fetchedAt: cached.at });
-    }
-    const { deals, lines } = await radar.peopleboxLeads();
-    const at = new Date().toISOString();
-    cache.set(PBL_CACHE_KEY, { rows: deals, lines, at }, TTL);
-    res.json({ configured: true, cached: false, rows: deals, lines, fetchedAt: at });
+    const r = await radarLoad(PBL_CACHE_KEY, req.query.refresh === '1', async () => {
+      const { deals, lines } = await radar.peopleboxLeads();
+      return { rows: deals, lines, at: new Date().toISOString() };
+    });
+    res.json({ configured: true, cached: r.cached, rows: r.value.rows, lines: r.value.lines, fetchedAt: r.value.at, ...staleInfo(r) });
   } catch (err) {
     console.error('Failed to load Peoplebox leads:', err);
     res.status(502).json({ error: 'radar_failed', message: err.message });
@@ -233,12 +251,8 @@ const LEADS_KEY = { teamtailor: 'ttleads', disprz: 'dzleads', hubstaff: 'hsleads
 const isPartnerProduct = (p) => radar.PARTNER_PRODUCTS.indexOf(p) >= 0;
 function canOpen(req, key) { return allowedProducts(req).indexOf(key) >= 0; }
 
-async function productBillingRows(product, force) {
-  const key = 'radar-billing-' + product;
-  if (!force) { const c = cache.get(key); if (c) return { rows: c, cached: true }; }
-  const rows = await radar.productBilling(product);
-  cache.set(key, rows, TTL);
-  return { rows, cached: false };
+function productBillingRows(product, force) {
+  return radarLoad('radar-billing-' + product, force, () => radar.productBilling(product));
 }
 
 app.get('/api/pbilling/:product', auth.requireAuth, async (req, res) => {
@@ -247,9 +261,10 @@ app.get('/api/pbilling/:product', auth.requireAuth, async (req, res) => {
   if (!canOpen(req, product)) return res.status(403).json({ error: 'forbidden', message: 'Your account does not have access to this product.' });
   try {
     if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
-    const { rows, cached } = await productBillingRows(product, req.query.refresh === '1');
-    const clients = {}; rows.forEach((r) => { clients[r.hsid || r.client] = 1; });
-    res.json({ configured: true, cached, clientCount: Object.keys(clients).length, rows });
+    const r = await productBillingRows(product, req.query.refresh === '1');
+    const rows = r.value;
+    const clients = {}; rows.forEach((x) => { clients[x.hsid || x.client] = 1; });
+    res.json({ configured: true, cached: r.cached, clientCount: Object.keys(clients).length, rows, ...staleInfo(r) });
   } catch (err) {
     console.error('Failed to load billing for', product, err);
     res.status(502).json({ error: 'radar_failed', message: err.message });
@@ -266,16 +281,12 @@ app.get('/api/pbilling/:product/lines', auth.requireAuth, async (req, res) => {
     if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
     const inv = String(req.query.invoice || '').trim();
     if (!inv) return res.status(400).json({ error: 'missing_invoice', message: 'invoice is required' });
-    const { rows } = await productBillingRows(product, false);
+    const rows = (await productBillingRows(product, false)).value;
     if (!rows.some((r) => r.invoice_ref === inv)) {
       return res.status(404).json({ error: 'unknown_invoice', message: 'Invoice is not in this billing report.' });
     }
-    const key = 'radar-lines:' + inv;
-    const cached = cache.get(key);
-    if (cached) return res.json({ configured: true, cached: true, rows: cached });
-    const lines = await radar.invoiceLines(inv);
-    cache.set(key, lines, TTL);
-    res.json({ configured: true, cached: false, rows: lines });
+    const r = await radarLoad('radar-lines:' + inv, false, () => radar.invoiceLines(inv));
+    res.json({ configured: true, cached: r.cached, rows: r.value, ...staleInfo(r) });
   } catch (err) {
     console.error('Failed to load invoice lines for', product, err);
     res.status(502).json({ error: 'radar_failed', message: err.message });
@@ -288,15 +299,11 @@ app.get('/api/leads/:product', auth.requireAuth, async (req, res) => {
   if (!canOpen(req, LEADS_KEY[product])) return res.status(403).json({ error: 'forbidden', message: 'Your account does not have access to this report.' });
   try {
     if (!radar.isConfigured()) return res.json({ configured: false, rows: [] });
-    const key = 'radar-leads-' + product;
-    if (req.query.refresh !== '1') {
-      const c = cache.get(key);
-      if (c) return res.json({ configured: true, cached: true, rows: c.rows, lines: c.lines, fetchedAt: c.at });
-    }
-    const { deals, lines } = await radar.productLeads(product);
-    const at = new Date().toISOString();
-    cache.set(key, { rows: deals, lines, at }, TTL);
-    res.json({ configured: true, cached: false, rows: deals, lines, fetchedAt: at });
+    const r = await radarLoad('radar-leads-' + product, req.query.refresh === '1', async () => {
+      const { deals, lines } = await radar.productLeads(product);
+      return { rows: deals, lines, at: new Date().toISOString() };
+    });
+    res.json({ configured: true, cached: r.cached, rows: r.value.rows, lines: r.value.lines, fetchedAt: r.value.at, ...staleInfo(r) });
   } catch (err) {
     console.error('Failed to load leads for', product, err);
     res.status(502).json({ error: 'radar_failed', message: err.message });

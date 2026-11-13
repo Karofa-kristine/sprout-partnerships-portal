@@ -168,8 +168,7 @@
     function loadLines(ref) {
       if (linesCache[ref] && !linesCache[ref].error) return;
       linesCache[ref] = { loading: true };
-      fetch('/api/pbilling/' + encodeURIComponent(C.product) + '/lines?invoice=' + encodeURIComponent(ref), { credentials: 'same-origin' })
-        .then(function (res) { if (!res.ok) return res.json().then(function (j) { throw new Error(j.message || ('HTTP ' + res.status)); }); return res.json(); })
+      radarFetch('/api/pbilling/' + encodeURIComponent(C.product) + '/lines?invoice=' + encodeURIComponent(ref))
         .then(function (d) { linesCache[ref] = { rows: d.rows || [] }; })
         .catch(function (err) { linesCache[ref] = { error: err.message }; })
         .then(function () { if (openInv[ref]) render(); });
@@ -207,8 +206,7 @@
       if (loaded && !force) return;
       var tb = $('Body');
       tb.innerHTML = "<tr><td colspan='8'><div class='empty'>Loading " + esc(C.label) + ' billing from RADAR…</div></td></tr>';
-      fetch('/api/pbilling/' + encodeURIComponent(C.product) + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
-        .then(function (res) { if (!res.ok) return res.json().then(function (j) { throw new Error(j.message || ('HTTP ' + res.status)); }); return res.json(); })
+      radarFetch('/api/pbilling/' + encodeURIComponent(C.product) + (force ? '?refresh=1' : ''))
         .then(function (d) {
           loaded = true;
           if (!d.configured) {
@@ -218,7 +216,7 @@
           }
           data = d.rows || [];
           if (force) linesCache = {};
-          $('Note').textContent = 'from RADAR · ' + data.length + ' invoices across ' + (d.clientCount || 0) + ' ' + C.label + ' clients (won deals with ' + C.label + ' line items)';
+          $('Note').textContent = 'from RADAR · ' + data.length + ' invoices across ' + (d.clientCount || 0) + ' ' + C.label + ' clients (won deals with ' + C.label + ' line items)' + radarStaleNote(d);
           buildFilters();
           render();
         })

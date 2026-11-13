@@ -23,36 +23,65 @@ function isConfigured() {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const sqlStr = (s) => "'" + String(s).replace(/'/g, "''") + "'";
 
+// Total time one query may take (warehouse cold start included). Kept under
+// Vercel's 300s function limit so the server can still answer with an error
+// or the last saved copy.
+const QUERY_BUDGET_MS = Number(process.env.RADAR_QUERY_BUDGET_MS || 240000);
+
+// fetch() with retries for temporary failures: network errors, HTTP 429 and
+// HTTP 5xx are retried (after 1s, then 3s); other HTTP errors fail at once.
+async function fetchRetry(url, init, what) {
+  const delays = [0, 1000, 3000];
+  let lastErr;
+  for (const d of delays) {
+    if (d) await sleep(d);
+    let r;
+    try {
+      r = await fetch(url, init);
+    } catch (e) {
+      lastErr = new Error(what + ' failed — ' + e.message);
+      continue;
+    }
+    if (r.ok) return r;
+    const body = (await r.text().catch(() => '')).slice(0, 200);
+    lastErr = new Error(what + ' failed — HTTP ' + r.status + (body ? ': ' + body : ''));
+    if (r.status !== 429 && r.status < 500) break;
+  }
+  throw lastErr;
+}
+
 async function runStatement(sql) {
   const host = process.env.RADAR_DB_HOST;
   const token = process.env.RADAR_DB_TOKEN;
   const wh = process.env.RADAR_WAREHOUSE_ID;
+  const started = Date.now();
+  const deadline = started + QUERY_BUDGET_MS;
 
-  const submit = await fetch(PROXY + '/api/databricks', {
+  // wait_timeout 10s: Databricks answers inline when the query finishes within
+  // 10s, so quick queries skip the polling round trips entirely.
+  const submit = await fetchRetry(PROXY + '/api/databricks', {
     method: 'POST',
     headers: { 'x-db-host': host, 'x-db-token': token, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       warehouse_id: wh,
       statement: sql,
-      wait_timeout: '0s',
+      wait_timeout: '10s',
       on_wait_timeout: 'CONTINUE',
       format: 'JSON_ARRAY',
     }),
-  });
-  if (!submit.ok) {
-    throw new Error('RADAR submit failed — HTTP ' + submit.status + ': ' + (await submit.text()).slice(0, 200));
-  }
+  }, 'RADAR submit');
 
   let data = await submit.json();
-  let id = data.statement_id;
+  const id = data.statement_id;
   let state = data.status && data.status.state;
 
-  let guard = 0;
+  let n = 0;
   while (state === 'PENDING' || state === 'RUNNING' || !state) {
-    if (++guard > 150) throw new Error('RADAR query timed out.');
-    await sleep(1000);
-    const poll = await fetch(PROXY + '/api/databricks-poll?id=' + encodeURIComponent(id));
-    if (!poll.ok) throw new Error('RADAR poll failed — HTTP ' + poll.status);
+    if (Date.now() > deadline) {
+      throw new Error('RADAR query timed out after ' + Math.round(QUERY_BUDGET_MS / 1000) + 's (the RADAR warehouse may still be starting up — try again in a minute).');
+    }
+    await sleep(Math.min(500 + n++ * 250, 2000));
+    const poll = await fetchRetry(PROXY + '/api/databricks-poll?id=' + encodeURIComponent(id), {}, 'RADAR poll');
     data = await poll.json();
     state = data.status && data.status.state;
   }
@@ -62,7 +91,23 @@ async function runStatement(sql) {
   }
 
   const cols = ((data.manifest && data.manifest.schema && data.manifest.schema.columns) || []).map((c) => c.name);
-  const arr = (data.result && data.result.data_array) || [];
+  const arr = ((data.result && data.result.data_array) || []).slice();
+
+  // Large results come back in several chunks; the first one is inline. Read
+  // the rest straight from Databricks (server-side credentials) so a big
+  // report is never silently cut short.
+  const chunks = (data.manifest && data.manifest.total_chunk_count) || 1;
+  if (chunks > 1) {
+    const base = (/^https?:\/\//.test(host) ? host : 'https://' + host).replace(/\/+$/, '');
+    for (let i = 1; i < chunks; i++) {
+      const r = await fetchRetry(base + '/api/2.0/sql/statements/' + encodeURIComponent(id) + '/result/chunks/' + i,
+        { headers: { Authorization: 'Bearer ' + token } }, 'RADAR result chunk ' + i + '/' + chunks);
+      const c = await r.json();
+      (c.data_array || []).forEach((row) => arr.push(row));
+    }
+  }
+
+  console.log('[radar] query ok in ' + (Date.now() - started) + 'ms, ' + arr.length + ' rows' + (chunks > 1 ? ' (' + chunks + ' chunks)' : ''));
   // JSON_ARRAY returns every value as a string; callers get {colName: value}.
   return arr.map((r) => {
     const o = {};
@@ -261,7 +306,7 @@ async function channelDeals() {
 
 /** Line items for one Unified Channel Pipeline deal (silver_line_items). */
 async function channelDealLines(dealId) {
-  if (!/^d+$/.test(String(dealId))) throw new Error('Invalid deal id');
+  if (!/^\d+$/.test(String(dealId))) throw new Error('Invalid deal id');
   const sql = `
     SELECT
       li.product_name, li.parent_product, li.clan, li.product_status,

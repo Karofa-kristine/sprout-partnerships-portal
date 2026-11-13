@@ -233,8 +233,7 @@
     if ((loaded && !force) || loading) return;
     loading = true; $(P + 'Refresh').disabled = true; $(P + 'Kpis').innerHTML = '';
     msg("<div class='sp' style='margin:0 auto 10px'></div>Loading " + esc(C.label) + " leads from RADAR…");
-    fetch('/api/leads/' + encodeURIComponent(C.product) + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
-      .then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error(j.message || ('HTTP ' + r.status)); }); return r.json(); })
+    radarFetch('/api/leads/' + encodeURIComponent(C.product) + (force ? '?refresh=1' : ''))
       .then(function (d) {
         if (!d.configured) { msg('<strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server.'); return; }
         var all = d.rows || []; linesBy = {};
@@ -243,7 +242,7 @@
         (d.lines || []).forEach(function (l) { (linesBy[l.deal_id] = linesBy[l.deal_id] || []).push(l); });
         loaded = true;
         buildAllMsel(); refreshSummaries();
-        $(P + 'Stamp').textContent = d.fetchedAt ? 'RADAR data as of ' + new Date(d.fetchedAt).toLocaleString() : '';
+        $(P + 'Stamp').textContent = (d.fetchedAt ? 'RADAR data as of ' + new Date(d.fetchedAt).toLocaleString() : '') + radarStaleNote(d);
         render();
       })
       .catch(function (e) { msg('<strong>Could not connect to RADAR.</strong>' + esc(e.message), true); })

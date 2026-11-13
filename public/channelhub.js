@@ -155,8 +155,7 @@
   function loadLines(id) {
     if (linesCache[id] && !linesCache[id].error) return;
     linesCache[id] = { loading: true };
-    fetch('/api/channelhub/lines?deal=' + encodeURIComponent(id), { credentials: 'same-origin' })
-      .then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error(j.message || ('HTTP ' + r.status)); }); return r.json(); })
+    radarFetch('/api/channelhub/lines?deal=' + encodeURIComponent(id))
       .then(function (d) { linesCache[id] = { rows: d.rows || [] }; })
       .catch(function (e) { linesCache[id] = { error: e.message }; })
       .then(function () { if (openD[id]) render(); });
@@ -189,15 +188,14 @@
     $('chRefresh').disabled = true;
     setStatus("<div class='sp' style='margin:0 auto 10px'></div>Loading Unified Channel Pipeline from RADAR…");
     $('chKpis').innerHTML = ''; $('chStages').innerHTML = '';
-    fetch('/api/channelhub' + (force ? '?refresh=1' : ''), { credentials: 'same-origin' })
-      .then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error(j.message || ('HTTP ' + r.status)); }); return r.json(); })
+    radarFetch('/api/channelhub' + (force ? '?refresh=1' : ''))
       .then(function (d) {
         if (!d.configured) { setStatus('<strong>RADAR connection not configured.</strong>Set RADAR_DB_HOST, RADAR_DB_TOKEN and RADAR_WAREHOUSE_ID on the server.'); return; }
         rows = d.rows || []; fetchedAt = d.fetchedAt || ''; loaded = true;
         if (force) linesCache = {};
         fillSelect('chStage', 'All stages', 'stage', state.stage);
         fillSelect('chRep', 'All sales reps', 'sales_rep', state.rep);
-        $('chStamp').textContent = fetchedAt ? 'RADAR data as of ' + new Date(fetchedAt).toLocaleString() : '';
+        $('chStamp').textContent = (fetchedAt ? 'RADAR data as of ' + new Date(fetchedAt).toLocaleString() : '') + radarStaleNote(d);
         render();
       })
       .catch(function (e) { setStatus('<strong>Could not connect to RADAR.</strong>' + esc(e.message), true); })
