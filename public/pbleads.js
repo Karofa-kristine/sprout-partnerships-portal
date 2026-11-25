@@ -115,7 +115,6 @@
       var id = r.deal_id || '', open = !!openD[id];
       var h = "<tr class='pbl-d' data-d='" + esc(id) + "' tabindex='0' aria-expanded='" + open + "'>" +
         "<td style='" + NAME + "'>" + chev(open) + esc(r.deal_name || '—') + '</td>' +
-        "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + esc(id || '—') + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.company || '—') + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.pipeline || '—') + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.stage || '—') + '</td>' +
@@ -129,9 +128,9 @@
         "<td class='r num' style='white-space:nowrap'>" + money2(r.pb_amount) + '</td>' +
         "<td class='r num' style='white-space:nowrap'>" + money2(r.pb_mrr) + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.products || '—') + '</td></tr>';
-      if (open) h += "<tr class='bl-nest'><td colspan='15'>" + linesHtml(id) + '</td></tr>';
+      if (open) h += "<tr class='bl-nest'><td colspan='14'>" + linesHtml(id) + '</td></tr>';
       return h;
-    }).join('') : "<tr><td colspan='15'><div class='empty'><strong>No Peoplebox leads match.</strong></div></td></tr>";
+    }).join('') : "<tr><td colspan='14'><div class='empty'><strong>No Peoplebox leads match.</strong></div></td></tr>";
     $('pblFoot').textContent = list.length + ' of ' + rows.length + ' Peoplebox leads (created 2025–2026) · click a lead to see its Peoplebox line items';
   }
 
@@ -210,7 +209,7 @@
     el.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAllMsel(); var b = el.querySelector('.msel-btn'); if (b) b.focus(); } });
   }
 
-  function msg(html, err) { $('pblBody').innerHTML = "<tr><td colspan='15'><div class='empty'" + (err ? " style='color:#c23a3a'" : '') + '>' + html + '</div></td></tr>'; }
+  function msg(html, err) { $('pblBody').innerHTML = "<tr><td colspan='14'><div class='empty'" + (err ? " style='color:#c23a3a'" : '') + '>' + html + '</div></td></tr>'; }
 
   function load(force) {
     if ((loaded && !force) || loading) return;
