@@ -11,7 +11,7 @@
   // still counted in the Won KPI and win rate.
   var rows = [], hiddenWon = [], linesBy = {}, loaded = false, loading = false;
   // Multi-select filters: each holds the list of ticked values ([] = all).
-  var state = { q: '', stage: [], pipeline: [], rep: [], journey: [], forecast: [], year: [], status: [],
+  var state = { q: '', stage: [], pipeline: [], rep: [], journey: [], lostReason: [], forecast: [], year: [], status: [],
     createdFrom: '', createdTo: '', closeFrom: '', closeTo: '' };
   var NOT_SET = '(not set)';
   var MS = [
@@ -22,6 +22,7 @@
     { id: 'pblPipeline', key: 'pipeline', label: 'Pipeline', all: 'All', get: function (r) { return r.pipeline || NOT_SET; } },
     { id: 'pblStage', key: 'stage', label: 'Stage', all: 'All', get: function (r) { return r.stage || NOT_SET; } },
     { id: 'pblJourney', key: 'journey', label: 'Journey', all: 'All', get: function (r) { return r.journey || NOT_SET; } },
+    { id: 'pblLostReason', key: 'lostReason', label: 'Deal Lost Reasons', all: 'All', get: function (r) { return r.lost_reasons || NOT_SET; } },
     { id: 'pblRep', key: 'rep', label: 'Sales rep', all: 'All', get: function (r) { return r.sales_rep || NOT_SET; } },
   ];
   // Date shown/filtered in the "Projected close date" column: the projected
