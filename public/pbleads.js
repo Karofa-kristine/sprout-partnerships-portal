@@ -62,7 +62,7 @@
       if (!inRange(String(r.create_date || '').slice(0, 10), state.createdFrom, state.createdTo)) return false;
       if (!inRange(closeDay(r), state.closeFrom, state.closeTo)) return false;
       if (!q) return true;
-      return [r.deal_name, r.deal_id, r.company, r.sales_rep, r.products, r.stage, r.forecast_category].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
+      return [r.deal_name, r.deal_id, r.company, r.sales_rep, r.products, r.stage, r.forecast_category, r.lost_reasons, r.closed_lost_reason].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; });
     });
   }
 
@@ -120,6 +120,8 @@
         "<td style='" + TXT + "'>" + esc(r.pipeline || '—') + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.stage || '—') + '</td>' +
         "<td style='white-space:nowrap'><span style='font-weight:600;color:" + (JC[r.journey] || 'var(--muted)') + "'>" + esc(r.journey || '—') + '</span></td>' +
+        "<td style='" + TXT + "'>" + esc(r.lost_reasons || '—') + '</td>' +
+        "<td style='" + TXT + "'>" + esc(r.closed_lost_reason || '—') + '</td>' +
         "<td style='white-space:nowrap;font-size:12.5px;font-weight:600;color:" + fcColor(r.forecast_category) + "'>" + esc(r.forecast_category || '—') + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.sales_rep || '—') + '</td>' +
         "<td class='num' style='font-size:12.5px;color:var(--muted);white-space:nowrap'>" + day(r.create_date) + '</td>' +
@@ -127,9 +129,9 @@
         "<td class='r num' style='white-space:nowrap'>" + money2(r.pb_amount) + '</td>' +
         "<td class='r num' style='white-space:nowrap'>" + money2(r.pb_mrr) + '</td>' +
         "<td style='" + TXT + "'>" + esc(r.products || '—') + '</td></tr>';
-      if (open) h += "<tr class='bl-nest'><td colspan='13'>" + linesHtml(id) + '</td></tr>';
+      if (open) h += "<tr class='bl-nest'><td colspan='15'>" + linesHtml(id) + '</td></tr>';
       return h;
-    }).join('') : "<tr><td colspan='13'><div class='empty'><strong>No Peoplebox leads match.</strong></div></td></tr>";
+    }).join('') : "<tr><td colspan='15'><div class='empty'><strong>No Peoplebox leads match.</strong></div></td></tr>";
     $('pblFoot').textContent = list.length + ' of ' + rows.length + ' Peoplebox leads (created 2025–2026) · click a lead to see its Peoplebox line items';
   }
 
@@ -208,7 +210,7 @@
     el.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAllMsel(); var b = el.querySelector('.msel-btn'); if (b) b.focus(); } });
   }
 
-  function msg(html, err) { $('pblBody').innerHTML = "<tr><td colspan='13'><div class='empty'" + (err ? " style='color:#c23a3a'" : '') + '>' + html + '</div></td></tr>'; }
+  function msg(html, err) { $('pblBody').innerHTML = "<tr><td colspan='15'><div class='empty'" + (err ? " style='color:#c23a3a'" : '') + '>' + html + '</div></td></tr>'; }
 
   function load(force) {
     if ((loaded && !force) || loading) return;

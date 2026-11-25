@@ -359,6 +359,8 @@ async function peopleboxLeads() {
       d.deal_type                               deal_type,
       d.stage_label                             stage,
       d.client_journey_stage                    journey,
+      d.reasons_for_lost_deal                   lost_reasons,
+      b.closed_lost_reason                      closed_lost_reason,
       CAST(d.create_date AS STRING)             create_date,
       CAST(d.projected_close_date AS STRING)    projected_close_date,
       CAST(d.close_date AS STRING)              close_date,
@@ -377,6 +379,7 @@ async function peopleboxLeads() {
     FROM shared.revops.silver_deals d
     JOIN pb ON pb.deal_id = d.deal_id
     LEFT JOIN shared.revops.silver_company c ON c.Company_id = d.company_id
+    LEFT JOIN shared.revops.bronze_hs_deal b ON CAST(b.DealId AS STRING) = CAST(d.deal_id AS STRING)
     WHERE ${PB_SCOPE}
     ORDER BY d.create_date DESC
     LIMIT 5000`;
@@ -447,6 +450,8 @@ async function productLeads(product) {
       d.deal_type                               deal_type,
       d.stage_label                             stage,
       d.client_journey_stage                    journey,
+      d.reasons_for_lost_deal                   lost_reasons,
+      b.closed_lost_reason                      closed_lost_reason,
       CAST(d.create_date AS STRING)             create_date,
       CAST(d.projected_close_date AS STRING)    projected_close_date,
       CAST(d.close_date AS STRING)              close_date,
@@ -465,6 +470,7 @@ async function productLeads(product) {
     FROM shared.revops.silver_deals d
     JOIN pm ON pm.deal_id = d.deal_id
     LEFT JOIN shared.revops.silver_company c ON c.Company_id = d.company_id
+    LEFT JOIN shared.revops.bronze_hs_deal b ON CAST(b.DealId AS STRING) = CAST(d.deal_id AS STRING)
     WHERE ${PB_SCOPE}
     ORDER BY d.create_date DESC
     LIMIT 5000`;

@@ -122,7 +122,7 @@ button{font-family:inherit;cursor:pointer;}
 .backlink:hover{color:var(--accent);}
 
 /* layout */
-.wrap{max-width:1280px;margin:0 auto;padding:26px 28px 70px;}
+.wrap{max-width:none;margin:0 auto;padding:26px 28px 70px;}
 .section-head{display:flex;align-items:baseline;gap:12px;margin:0 0 14px;}
 .section-head h2{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em;}
 .section-head .note{font-size:12px;color:var(--faint);}
@@ -253,7 +253,7 @@ td.co .cid{display:block;font-size:10.5px;color:var(--faint);font-family:var(--f
 .statebox .sp{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 16px;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .statebox.err strong{display:block;color:var(--text);font-size:16px;margin-bottom:6px;}
-footer{max-width:1280px;margin:0 auto;padding:0 28px 40px;color:var(--faint);font-size:11.5px;}
+footer{max-width:none;margin:0 auto;padding:0 28px 40px;color:var(--faint);font-size:11.5px;}
 
 @media (max-width:880px){
   .kpis{grid-template-columns:1fr 1fr;}
